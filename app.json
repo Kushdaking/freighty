@@ -1,0 +1,55 @@
+{
+  "expo": {
+    "name": "Freight Flow Carrier",
+    "slug": "freight-flow-carrier",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#1a1f2e"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.haulify.carrier",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Used to photograph vehicles at pickup and delivery",
+        "NSPhotoLibraryUsageDescription": "Used to upload vehicle photos and documents"
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#1a1f2e"
+      },
+      "package": "com.haulify.carrier",
+      "permissions": [
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE"
+      ]
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow Freight Flow to access your camera to photograph vehicles."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow Freight Flow to access your photos for vehicle documentation."
+        }
+      ]
+    ],
+    "scheme": "freightflow",
+    "web": {
+      "bundler": "metro"
+    }
+  }
+}
