@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Freight Flow Carrier",
-    "slug": "freight-flow-carrier",
+    "slug": "haulify-carrier",
     "version": "1.0.0",
     "sdkVersion": "54.0.0",
     "orientation": "portrait",
