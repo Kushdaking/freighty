@@ -1,6 +1,6 @@
-import { Redirect } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { View, ActivityIndicator } from 'react-native';
+import { Redirect } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { colors } from '@/lib/colors';
 
@@ -9,10 +9,17 @@ export default function Index() {
   const [hasSession, setHasSession] = useState(false);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setHasSession(!!session);
-      setLoading(false);
-    });
+    const check = async () => {
+      try {
+        const { data } = await supabase.auth.getSession();
+        setHasSession(!!data?.session);
+      } catch (e) {
+        setHasSession(false);
+      } finally {
+        setLoading(false);
+      }
+    };
+    check();
   }, []);
 
   if (loading) {
