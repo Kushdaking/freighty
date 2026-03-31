@@ -1,15 +1,23 @@
 import { useEffect, useState, useCallback } from 'react';
 import {
-  View, Text, ScrollView, StyleSheet, RefreshControl, ActivityIndicator, TouchableOpacity,
+  View, Text, ScrollView, StyleSheet, RefreshControl, ActivityIndicator, Dimensions,
 } from 'react-native';
+import Svg, { Rect, Text as SvgText, G, Line } from 'react-native-svg';
 import { supabase } from '@/lib/supabase';
 import { colors } from '@/lib/colors';
+
+const SCREEN_WIDTH = Dimensions.get('window').width;
 
 interface WeekSummary {
   weekLabel: string;
   weekStart: string;
   earned: number;
   loadCount: number;
+}
+
+interface MonthSummary {
+  totalEarnedThisMonth: number;
+  loadsThisMonth: number;
 }
 
 interface EarningsSummary {
@@ -19,16 +27,17 @@ interface EarningsSummary {
   paidLoads: number;
   pendingLoads: number;
   weeks: WeekSummary[];
+  month: MonthSummary;
+  completedLoads: Array<{ id: string; tracking_number: string; total_price: number; origin_city: string; destination_city: string; updated_at: string }>;
 }
 
 function getWeekLabel(date: Date): string {
   const start = new Date(date);
-  start.setDate(start.getDate() - start.getDay()); // Sunday
+  start.setDate(start.getDate() - start.getDay());
   const end = new Date(start);
   end.setDate(end.getDate() + 6);
-
   const fmt = (d: Date) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-  return `${fmt(start)} – ${fmt(end)}`;
+  return `${fmt(start)}`;
 }
 
 function getWeekStart(date: Date): string {
@@ -38,6 +47,113 @@ function getWeekStart(date: Date): string {
   return d.toISOString();
 }
 
+function isThisMonth(dateStr: string): boolean {
+  const d = new Date(dateStr);
+  const now = new Date();
+  return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+}
+
+interface BarChartProps {
+  weeks: WeekSummary[];
+}
+
+function WeeklyBarChart({ weeks }: BarChartProps) {
+  if (weeks.length === 0) return null;
+
+  // Show last 8 weeks max for readability
+  const displayWeeks = weeks.slice(0, 8).reverse();
+  const maxEarned = Math.max(...displayWeeks.map(w => w.earned), 1);
+
+  const chartPadding = { left: 48, right: 12, top: 16, bottom: 36 };
+  const chartWidth = SCREEN_WIDTH - 32; // card margin
+  const chartHeight = 160;
+  const plotWidth = chartWidth - chartPadding.left - chartPadding.right;
+  const plotHeight = chartHeight - chartPadding.top - chartPadding.bottom;
+  const barWidth = Math.min((plotWidth / displayWeeks.length) * 0.6, 32);
+  const barSpacing = plotWidth / displayWeeks.length;
+
+  // Y-axis labels
+  const ySteps = 4;
+  const yLabels = Array.from({ length: ySteps + 1 }, (_, i) => {
+    const val = (maxEarned / ySteps) * i;
+    return val >= 1000 ? `$${(val / 1000).toFixed(1)}k` : `$${Math.round(val)}`;
+  });
+
+  return (
+    <Svg width={chartWidth} height={chartHeight}>
+      {/* Y-axis grid lines */}
+      {yLabels.map((label, i) => {
+        const y = chartPadding.top + plotHeight - (plotHeight / ySteps) * i;
+        return (
+          <G key={i}>
+            <Line
+              x1={chartPadding.left}
+              y1={y}
+              x2={chartWidth - chartPadding.right}
+              y2={y}
+              stroke={colors.border}
+              strokeWidth={1}
+              strokeDasharray="4 4"
+            />
+            <SvgText
+              x={chartPadding.left - 4}
+              y={y + 4}
+              textAnchor="end"
+              fontSize={9}
+              fill={colors.textDim}
+            >
+              {label}
+            </SvgText>
+          </G>
+        );
+      })}
+
+      {/* Bars */}
+      {displayWeeks.map((week, i) => {
+        const barHeight = (week.earned / maxEarned) * plotHeight;
+        const x = chartPadding.left + i * barSpacing + (barSpacing - barWidth) / 2;
+        const y = chartPadding.top + plotHeight - barHeight;
+
+        return (
+          <G key={week.weekStart}>
+            <Rect
+              x={x}
+              y={y}
+              width={barWidth}
+              height={Math.max(barHeight, 2)}
+              rx={4}
+              fill={colors.primary}
+              opacity={0.85}
+            />
+            {/* Week label */}
+            <SvgText
+              x={x + barWidth / 2}
+              y={chartHeight - chartPadding.bottom + 12}
+              textAnchor="middle"
+              fontSize={9}
+              fill={colors.textDim}
+            >
+              {week.weekLabel}
+            </SvgText>
+            {/* Load count above bar */}
+            {week.loadCount > 0 && (
+              <SvgText
+                x={x + barWidth / 2}
+                y={Math.max(y - 4, chartPadding.top + 8)}
+                textAnchor="middle"
+                fontSize={9}
+                fill={colors.primary}
+              >
+                {week.loadCount}
+              </SvgText>
+            )}
+          </G>
+        );
+      })}
+    </Svg>
+  );
+}
+
 export default function EarningsScreen() {
   const [summary, setSummary] = useState<EarningsSummary | null>(null);
   const [loading, setLoading] = useState(true);
@@ -45,11 +161,11 @@ export default function EarningsScreen() {
 
   async function fetchEarnings() {
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!user) { setLoading(false); setRefreshing(false); return; }
 
     const { data: loads, error } = await supabase
       .from('shipments')
-      .select('id, status, carrier_status, total_price, updated_at, created_at')
+      .select('id, tracking_number, status, carrier_status, total_price, updated_at, created_at, origin_city, destination_city')
       .eq('carrier_user_id', user.id)
       .not('total_price', 'is', null)
       .order('updated_at', { ascending: false })
@@ -67,6 +183,10 @@ export default function EarningsScreen() {
     const totalPaid = paid.reduce((sum, l) => sum + (parseFloat(l.total_price) || 0), 0);
     const totalPending = pending.reduce((sum, l) => sum + (parseFloat(l.total_price) || 0), 0);
 
+    // This month
+    const monthPaid = paid.filter(l => isThisMonth(l.updated_at || l.created_at));
+    const totalEarnedThisMonth = monthPaid.reduce((sum, l) => sum + (parseFloat(l.total_price) || 0), 0);
+
     // Weekly breakdown from delivered loads
     const weekMap = new Map<string, WeekSummary>();
     for (const load of paid) {
@@ -74,7 +194,6 @@ export default function EarningsScreen() {
       const date = new Date(load.updated_at || load.created_at);
       const weekStart = getWeekStart(date);
       const weekLabel = getWeekLabel(date);
-
       if (!weekMap.has(weekStart)) {
         weekMap.set(weekStart, { weekStart, weekLabel, earned: 0, loadCount: 0 });
       }
@@ -85,7 +204,17 @@ export default function EarningsScreen() {
 
     const weeks = Array.from(weekMap.values())
       .sort((a, b) => b.weekStart.localeCompare(a.weekStart))
-      .slice(0, 12); // last 12 weeks
+      .slice(0, 12);
+
+    // Completed loads list
+    const completedLoads = paid.slice(0, 20).map(l => ({
+      id: l.id,
+      tracking_number: l.tracking_number,
+      total_price: parseFloat(l.total_price) || 0,
+      origin_city: l.origin_city,
+      destination_city: l.destination_city,
+      updated_at: l.updated_at || l.created_at,
+    }));
 
     setSummary({
       totalPaid,
@@ -94,6 +223,8 @@ export default function EarningsScreen() {
       paidLoads: paid.length,
       pendingLoads: pending.length,
       weeks,
+      month: { totalEarnedThisMonth, loadsThisMonth: monthPaid.length },
+      completedLoads,
     });
 
     setLoading(false);
@@ -119,8 +250,6 @@ export default function EarningsScreen() {
     );
   }
 
-  const maxWeekEarning = summary.weeks.length > 0 ? Math.max(...summary.weeks.map(w => w.earned)) : 1;
-
   return (
     <ScrollView
       style={styles.container}
@@ -145,6 +274,15 @@ export default function EarningsScreen() {
         </View>
       </View>
 
+      {/* This Month card */}
+      <View style={[styles.totalCard, { borderColor: colors.success + '44' }]}>
+        <Text style={[styles.totalLabel, { color: colors.success }]}>This Month</Text>
+        <Text style={styles.totalAmount}>
+          ${summary.month.totalEarnedThisMonth.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+        </Text>
+        <Text style={styles.totalSubtext}>{summary.month.loadsThisMonth} loads completed this month</Text>
+      </View>
+
       <View style={styles.totalCard}>
         <Text style={styles.totalLabel}>All-Time Earnings</Text>
         <Text style={styles.totalAmount}>
@@ -153,34 +291,38 @@ export default function EarningsScreen() {
         <Text style={styles.totalSubtext}>{summary.paidLoads + summary.pendingLoads} total loads</Text>
       </View>
 
-      {/* Weekly Breakdown */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Weekly Breakdown</Text>
-
-        {summary.weeks.length === 0 ? (
-          <View style={styles.emptyWeeks}>
-            <Text style={styles.emptyText}>No earnings history yet</Text>
+      {/* Weekly Bar Chart */}
+      {summary.weeks.length > 0 && (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Weekly Earnings (last 8 weeks)</Text>
+          <View style={styles.chartCard}>
+            <WeeklyBarChart weeks={summary.weeks} />
           </View>
-        ) : (
-          summary.weeks.map((week, idx) => {
-            const barWidth = (week.earned / maxWeekEarning) * 100;
-            return (
-              <View key={week.weekStart} style={styles.weekRow}>
-                <View style={styles.weekInfo}>
-                  <Text style={styles.weekLabel}>{week.weekLabel}</Text>
-                  <Text style={styles.weekLoads}>{week.loadCount} load{week.loadCount !== 1 ? 's' : ''}</Text>
-                </View>
-                <View style={styles.weekBarContainer}>
-                  <View style={[styles.weekBar, { width: `${Math.max(barWidth, 4)}%` }]} />
-                </View>
-                <Text style={styles.weekAmount}>
-                  ${week.earned.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+        </View>
+      )}
+
+      {/* Completed Loads List */}
+      {summary.completedLoads.length > 0 && (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Completed Loads</Text>
+          {summary.completedLoads.map(load => (
+            <View key={load.id} style={styles.loadRow}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.loadTracking}>{load.tracking_number}</Text>
+                <Text style={styles.loadRoute}>
+                  {load.origin_city} → {load.destination_city}
+                </Text>
+                <Text style={styles.loadDate}>
+                  {new Date(load.updated_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                 </Text>
               </View>
-            );
-          })
-        )}
-      </View>
+              <Text style={styles.loadAmount}>
+                ${load.total_price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </Text>
+            </View>
+          ))}
+        </View>
+      )}
 
       <View style={{ height: 32 }} />
     </ScrollView>
@@ -215,32 +357,30 @@ const styles = StyleSheet.create({
   totalLabel: { fontSize: 11, fontWeight: '700', color: colors.primary, textTransform: 'uppercase', letterSpacing: 0.5 },
   totalAmount: { fontSize: 36, fontWeight: '900', color: colors.text, letterSpacing: -1, marginTop: 4 },
   totalSubtext: { fontSize: 12, color: colors.textDim, marginTop: 4 },
-  section: { padding: 16, paddingTop: 4 },
+  section: { paddingHorizontal: 16, paddingTop: 4, paddingBottom: 0 },
   sectionTitle: { fontSize: 13, fontWeight: '800', color: colors.text, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 12 },
-  weekRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-    gap: 10,
-  },
-  weekInfo: { width: 130 },
-  weekLabel: { fontSize: 12, fontWeight: '600', color: colors.text },
-  weekLoads: { fontSize: 10, color: colors.textDim, marginTop: 2 },
-  weekBarContainer: {
-    flex: 1,
-    height: 8,
-    backgroundColor: colors.bgCardAlt,
-    borderRadius: 4,
+  chartCard: {
+    backgroundColor: colors.bgCard,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: 8,
+    marginBottom: 16,
     overflow: 'hidden',
   },
-  weekBar: {
-    height: '100%',
-    backgroundColor: colors.primary,
-    borderRadius: 4,
+  loadRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    backgroundColor: colors.bgCard,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginBottom: 8,
   },
-  weekAmount: { fontSize: 13, fontWeight: '700', color: colors.success, width: 64, textAlign: 'right' },
-  emptyWeeks: { paddingVertical: 32, alignItems: 'center' },
-  emptyText: { color: colors.textDim, fontSize: 14 },
+  loadTracking: { fontSize: 12, fontWeight: '800', color: colors.text },
+  loadRoute: { fontSize: 11, color: colors.textDim, marginTop: 2 },
+  loadDate: { fontSize: 10, color: colors.textDim, marginTop: 2 },
+  loadAmount: { fontSize: 16, fontWeight: '900', color: colors.success },
 });

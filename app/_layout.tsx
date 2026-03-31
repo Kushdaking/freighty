@@ -1,9 +1,11 @@
 import { useEffect, useRef } from 'react';
+import { View } from 'react-native';
 import { Stack, router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as Notifications from 'expo-notifications';
 import { colors } from '@/lib/colors';
 import { setupPushNotifications, getNotificationRoute } from '@/lib/notifications';
+import OfflineIndicator from '@/components/OfflineIndicator';
 
 export default function RootLayout() {
   const notificationListener = useRef<any>();
@@ -32,8 +34,9 @@ export default function RootLayout() {
   }, []);
 
   return (
-    <>
+    <View style={{ flex: 1 }}>
       <StatusBar style="light" />
+      <OfflineIndicator />
       <Stack
         screenOptions={{
           headerStyle: { backgroundColor: colors.bg },
@@ -49,6 +52,6 @@ export default function RootLayout() {
         <Stack.Screen name="onboarding" options={{ headerShown: false }} />
         <Stack.Screen name="vin-scanner" options={{ title: 'Scan VIN', presentation: 'modal' }} />
       </Stack>
-    </>
+    </View>
   );
 }
