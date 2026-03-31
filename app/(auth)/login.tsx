@@ -3,6 +3,7 @@ import {
   View, Text, TextInput, TouchableOpacity,
   StyleSheet, KeyboardAvoidingView, Platform, ActivityIndicator, Alert,
 } from 'react-native';
+import { router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { colors } from '@/lib/colors';
 
@@ -62,6 +63,13 @@ export default function LoginScreen() {
               : <Text style={styles.buttonText}>Sign In</Text>
             }
           </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.registerBtn}
+            onPress={() => router.push('/onboarding')}
+          >
+            <Text style={styles.registerText}>New carrier? Create an account</Text>
+          </TouchableOpacity>
         </View>
       </View>
     </KeyboardAvoidingView>
@@ -94,4 +102,6 @@ const styles = StyleSheet.create({
   },
   buttonDisabled: { opacity: 0.6 },
   buttonText: { color: colors.white, fontSize: 16, fontWeight: '700' },
+  registerBtn: { padding: 14, alignItems: 'center' },
+  registerText: { color: colors.primary, fontSize: 15, fontWeight: '600' },
 });
