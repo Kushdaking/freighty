@@ -16,6 +16,7 @@ export default function LoadDetailScreen() {
   const [events, setEvents] = useState<ShipmentEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
+  const [loadOrder, setLoadOrder] = useState<any[]>([]);
 
   useEffect(() => {
     async function fetch() {
@@ -23,7 +24,42 @@ export default function LoadDetailScreen() {
         supabase.from('shipments').select('*, vehicles(*)').eq('id', id).single(),
         supabase.from('shipment_events').select('*').eq('shipment_id', id).order('event_time', { ascending: false }),
       ]);
-      if (shipmentRes.data) setLoad(shipmentRes.data);
+      if (shipmentRes.data) {
+        setLoad(shipmentRes.data);
+        // Compute load order if multi-vehicle (inline optimization)
+        if (shipmentRes.data.vehicles && shipmentRes.data.vehicles.length > 1) {
+          try {
+            const vehicles = shipmentRes.data.vehicles;
+            const GVWR_DEFAULTS: Record<string, number> = {
+              'Truck': 8500, 'Pickup': 7500, 'SUV': 6500, 'Van': 5000,
+              'Sedan': 4000, 'Coupe': 3800, 'Convertible': 3600,
+            };
+            const enriched = vehicles.map((v: any, idx: number) => {
+              let gvwr = 4000;
+              for (const [type, weight] of Object.entries(GVWR_DEFAULTS)) {
+                if (v.model?.toLowerCase().includes(type.toLowerCase())) { gvwr = weight; break; }
+              }
+              return { ...v, estimatedGVWR: gvwr, isInoperable: !v.is_operable, isOversized: gvwr > 7000, originalIndex: idx };
+            });
+            const sorted = [...enriched].sort((a: any, b: any) => {
+              if (a.isInoperable !== b.isInoperable) return a.isInoperable ? 1 : -1;
+              return b.estimatedGVWR - a.estimatedGVWR;
+            });
+            setLoadOrder(sorted.map((v: any, idx: number) => ({
+              position: idx + 1,
+              vehicleId: v.id,
+              vin: v.vin,
+              year: v.year,
+              make: v.make,
+              model: v.model,
+              isInoperable: v.isInoperable,
+              isOversized: v.isOversized,
+              deckRecommendation: idx < Math.ceil(sorted.length / 2) ? 'lower' : 'upper',
+              loadingNote: v.isInoperable ? 'INOP — needs winch or dolly' : v.isOversized ? 'OVERSIZED — verify clearance' : 'Standard loading',
+            })));
+          } catch { /* non-critical */ }
+        }
+      }
       if (eventsRes.data) setEvents(eventsRes.data);
       setLoading(false);
     }
@@ -154,6 +190,33 @@ export default function LoadDetailScreen() {
           </View>
         )}
 
+        {/* Load Order (multi-vehicle only) */}
+        {loadOrder.length > 1 && (
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>🚛 Recommended Load Order</Text>
+            {loadOrder.map((item: any) => (
+              <View key={item.vehicleId} style={styles.loadOrderRow}>
+                <View style={[styles.loadOrderNum, { backgroundColor: item.isInoperable ? '#f59e0b22' : colors.primary + '22' }]}>
+                  <Text style={[styles.loadOrderNumText, { color: item.isInoperable ? '#f59e0b' : colors.primary }]}>
+                    {item.position}
+                  </Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.vehicleName}>
+                    {[item.year, item.make, item.model].filter(Boolean).join(' ') || `Vehicle ${item.position}`}
+                  </Text>
+                  <Text style={styles.vehicleSub}>
+                    {item.deckRecommendation === 'lower' ? '⬇️ Lower deck' : '⬆️ Upper deck'}
+                    {item.isInoperable ? ' · ⚠️ INOP' : ''}
+                    {item.isOversized ? ' · 📏 Oversized' : ''}
+                  </Text>
+                  <Text style={[styles.vehicleSub, { fontSize: 11 }]}>{item.loadingNote}</Text>
+                </View>
+              </View>
+            ))}
+          </View>
+        )}
+
         {/* Load Info */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Load Details</Text>
@@ -278,6 +341,15 @@ const styles = StyleSheet.create({
   vehicleRow: { gap: 2, paddingVertical: 4, borderTopWidth: 1, borderTopColor: colors.border },
   vehicleName: { color: colors.text, fontWeight: '700', fontSize: 14 },
   vehicleSub: { color: colors.textMuted, fontSize: 13 },
+  loadOrderRow: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: 10,
+    paddingVertical: 6, borderTopWidth: 1, borderTopColor: colors.border,
+  },
+  loadOrderNum: {
+    width: 28, height: 28, borderRadius: 14,
+    justifyContent: 'center', alignItems: 'center', flexShrink: 0,
+  },
+  loadOrderNumText: { fontSize: 13, fontWeight: '800' },
   quickActions: { flexDirection: 'row', gap: 8 },
   quickAction: {
     flex: 1,

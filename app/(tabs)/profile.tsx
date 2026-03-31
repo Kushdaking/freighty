@@ -1,79 +1,74 @@
 import { useEffect, useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
-  Alert, ActivityIndicator, ScrollView, TextInput, Modal,
+  Alert, ActivityIndicator, ScrollView, TextInput,
 } from 'react-native';
+import Slider from '@react-native-community/slider';
 import { supabase } from '@/lib/supabase';
 import { colors } from '@/lib/colors';
 import type { CarrierUser } from '@/lib/types';
 
+const DEADHEAD_STEPS = [25, 50, 75, 100];
+
 export default function ProfileScreen() {
   const [carrier, setCarrier] = useState<CarrierUser | null>(null);
   const [loading, setLoading] = useState(true);
-  const [eldConnected, setEldConnected] = useState(false);
-  const [showEldModal, setShowEldModal] = useState(false);
-  const [eldApiKey, setEldApiKey] = useState('');
-  const [eldPlatform, setEldPlatform] = useState('samsara');
-  const [eldSaving, setEldSaving] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  // Route preference state
+  const [homeBaseCity, setHomeBaseCity] = useState('');
+  const [homeBaseState, setHomeBaseState] = useState('');
+  const [maxDeadhead, setMaxDeadhead] = useState(50);
+  const [nextDestCity, setNextDestCity] = useState('');
+  const [nextDestState, setNextDestState] = useState('');
 
   useEffect(() => {
-    async function load() {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data } = await supabase
-        .from('carrier_users')
-        .select('*')
-        .eq('auth_user_id', user.id)
-        .single();
-
-      setCarrier(data);
-
-      if (data?.id) {
-        const { data: creds } = await supabase
-          .from('marketplace_credentials')
-          .select('platform, is_active')
-          .eq('carrier_user_id', data.id)
-          .eq('is_active', true)
-          .limit(1);
-        setEldConnected(!!(creds && creds.length > 0));
-      }
-
-      setLoading(false);
-    }
     load();
   }, []);
 
-  async function connectELD() {
-    if (!eldApiKey.trim()) {
-      Alert.alert('Required', 'Please enter your API key');
-      return;
-    }
-    setEldSaving(true);
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user || !carrier) throw new Error('Not authenticated');
+  async function load() {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
 
+    const { data } = await supabase
+      .from('carrier_users')
+      .select('*')
+      .eq('auth_user_id', user.id)
+      .single();
+
+    if (data) {
+      setCarrier(data);
+      setHomeBaseCity(data.home_base_city ?? '');
+      setHomeBaseState(data.home_base_state ?? '');
+      setMaxDeadhead(data.max_deadhead_miles ?? 50);
+      setNextDestCity(data.next_available_location_city ?? '');
+      setNextDestState(data.next_available_location_state ?? '');
+    }
+    setLoading(false);
+  }
+
+  async function handleSaveRoutePrefs() {
+    if (!carrier) return;
+    setSaving(true);
+    try {
       const { error } = await supabase
-        .from('marketplace_credentials')
-        .upsert({
-          carrier_user_id: carrier.id,
-          platform: eldPlatform,
-          api_key: eldApiKey.trim(),
-          is_active: true,
-          updated_at: new Date().toISOString(),
-        }, { onConflict: 'carrier_user_id,platform' });
+        .from('carrier_users')
+        .update({
+          home_base_city: homeBaseCity || null,
+          home_base_state: homeBaseState?.toUpperCase().slice(0, 2) || null,
+          max_deadhead_miles: maxDeadhead,
+          next_available_location_city: nextDestCity || null,
+          next_available_location_state: nextDestState?.toUpperCase().slice(0, 2) || null,
+        })
+        .eq('id', carrier.id);
 
       if (error) throw error;
-
-      setEldConnected(true);
-      setShowEldModal(false);
-      setEldApiKey('');
-      Alert.alert('Connected!', `${eldPlatform.charAt(0).toUpperCase() + eldPlatform.slice(1)} ELD connected successfully. Your hours of service and location will sync to dispatch.`);
-    } catch (err: any) {
-      Alert.alert('Error', err.message ?? 'Failed to connect ELD');
+      Alert.alert('Saved', 'Route preferences updated.');
+      load();
+    } catch (e: any) {
+      Alert.alert('Error', e.message ?? 'Failed to save');
     } finally {
-      setEldSaving(false);
+      setSaving(false);
     }
   }
 
@@ -122,79 +117,89 @@ export default function ProfileScreen() {
         <InfoRow label="FMCSA Status" value={carrier?.fmcsa_status?.toUpperCase()} />
       </View>
 
-      {/* ELD Integration */}
+      {/* ── Route Preferences ──────────────────────────────────── */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>ELD Integration</Text>
-        <InfoRow label="Status" value={eldConnected ? '✅ Connected' : '⚪ Not Connected'} />
-        {(carrier as any)?.eld_platform && (
-          <InfoRow label="Platform" value={(carrier as any).eld_platform} />
-        )}
-        {(carrier as any)?.eld_hours_available !== undefined && (
-          <InfoRow label="Hours Available" value={`${(carrier as any).eld_hours_available}h today`} />
-        )}
+        <Text style={styles.sectionTitle}>🗺️ Route Preferences</Text>
+
+        <Text style={styles.fieldLabel}>Home Base</Text>
+        <View style={styles.row}>
+          <TextInput
+            style={[styles.input, { flex: 2, marginRight: 8 }]}
+            placeholder="City"
+            placeholderTextColor={colors.textMuted}
+            value={homeBaseCity}
+            onChangeText={setHomeBaseCity}
+            autoCapitalize="words"
+          />
+          <TextInput
+            style={[styles.input, { flex: 1, textTransform: 'uppercase' }]}
+            placeholder="ST"
+            placeholderTextColor={colors.textMuted}
+            value={homeBaseState}
+            onChangeText={t => setHomeBaseState(t.toUpperCase().slice(0, 2))}
+            maxLength={2}
+            autoCapitalize="characters"
+          />
+        </View>
+
+        <Text style={styles.fieldLabel}>
+          Max Deadhead Miles: <Text style={styles.sliderValue}>{maxDeadhead} mi</Text>
+        </Text>
+        <Slider
+          style={styles.slider}
+          minimumValue={25}
+          maximumValue={100}
+          step={25}
+          value={maxDeadhead}
+          onValueChange={setMaxDeadhead}
+          minimumTrackTintColor={colors.primary}
+          maximumTrackTintColor={colors.border}
+          thumbTintColor={colors.primary}
+        />
+        <View style={styles.sliderTicks}>
+          {DEADHEAD_STEPS.map(v => (
+            <Text key={v} style={[styles.sliderTick, maxDeadhead === v && styles.sliderTickActive]}>
+              {v}
+            </Text>
+          ))}
+        </View>
+
+        <Text style={styles.fieldLabel}>Where are you heading next?</Text>
+        <View style={styles.row}>
+          <TextInput
+            style={[styles.input, { flex: 2, marginRight: 8 }]}
+            placeholder="Destination city"
+            placeholderTextColor={colors.textMuted}
+            value={nextDestCity}
+            onChangeText={setNextDestCity}
+            autoCapitalize="words"
+          />
+          <TextInput
+            style={[styles.input, { flex: 1 }]}
+            placeholder="ST"
+            placeholderTextColor={colors.textMuted}
+            value={nextDestState}
+            onChangeText={t => setNextDestState(t.toUpperCase().slice(0, 2))}
+            maxLength={2}
+            autoCapitalize="characters"
+          />
+        </View>
+
         <TouchableOpacity
-          style={[styles.eldBtn, eldConnected && styles.eldBtnConnected]}
-          onPress={() => setShowEldModal(true)}
+          style={[styles.saveBtn, saving && styles.saveBtnDisabled]}
+          onPress={handleSaveRoutePrefs}
+          disabled={saving}
         >
-          <Text style={styles.eldBtnText}>
-            {eldConnected ? '🔌 Reconnect ELD' : '🔌 Connect ELD'}
-          </Text>
+          {saving
+            ? <ActivityIndicator size="small" color={colors.white} />
+            : <Text style={styles.saveBtnText}>Save Route Preferences</Text>
+          }
         </TouchableOpacity>
       </View>
 
       <TouchableOpacity style={styles.signOutBtn} onPress={handleSignOut}>
         <Text style={styles.signOutText}>Sign Out</Text>
       </TouchableOpacity>
-
-      {/* ELD Connect Modal */}
-      <Modal visible={showEldModal} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setShowEldModal(false)}>
-        <View style={styles.modalContainer}>
-          <Text style={styles.modalTitle}>🔌 Connect ELD</Text>
-          <Text style={styles.modalSub}>
-            Connect your Electronic Logging Device to share Hours of Service and location with dispatchers.
-          </Text>
-
-          <Text style={styles.fieldLabel}>ELD Provider</Text>
-          <View style={styles.platformPicker}>
-            {['samsara', 'keeptruckin', 'geotab'].map(p => (
-              <TouchableOpacity
-                key={p}
-                style={[styles.platformBtn, eldPlatform === p && styles.platformBtnActive]}
-                onPress={() => setEldPlatform(p)}
-              >
-                <Text style={[styles.platformText, eldPlatform === p && styles.platformTextActive]}>
-                  {p.charAt(0).toUpperCase() + p.slice(1)}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          <Text style={styles.fieldLabel}>API Key</Text>
-          <TextInput
-            style={styles.apiInput}
-            value={eldApiKey}
-            onChangeText={setEldApiKey}
-            placeholder="Paste your API key here"
-            placeholderTextColor={colors.textDim}
-            secureTextEntry
-            autoCapitalize="none"
-          />
-          <Text style={styles.apiHint}>
-            Find your API key in your {eldPlatform} dashboard → Settings → Developer → API Keys
-          </Text>
-
-          <TouchableOpacity
-            style={[styles.connectBtn, eldSaving && { opacity: 0.6 }]}
-            onPress={connectELD}
-            disabled={eldSaving}
-          >
-            <Text style={styles.connectBtnText}>{eldSaving ? 'Connecting...' : 'Connect'}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={{ alignItems: 'center', padding: 16 }} onPress={() => setShowEldModal(false)}>
-            <Text style={{ color: colors.textMuted, fontSize: 14 }}>Cancel</Text>
-          </TouchableOpacity>
-        </View>
-      </Modal>
     </ScrollView>
   );
 }
@@ -243,6 +248,32 @@ const styles = StyleSheet.create({
   infoRow: { flexDirection: 'row', justifyContent: 'space-between' },
   infoLabel: { color: colors.textMuted, fontSize: 14 },
   infoValue: { color: colors.text, fontSize: 14, fontWeight: '600' },
+  fieldLabel: { color: colors.text, fontSize: 13, fontWeight: '600', marginBottom: -4 },
+  row: { flexDirection: 'row', alignItems: 'center' },
+  input: {
+    backgroundColor: colors.bg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    color: colors.text,
+    fontSize: 14,
+  },
+  slider: { width: '100%', height: 40 },
+  sliderValue: { color: colors.primary, fontWeight: '800' },
+  sliderTicks: { flexDirection: 'row', justifyContent: 'space-between', marginTop: -8, paddingHorizontal: 2 },
+  sliderTick: { color: colors.textMuted, fontSize: 11 },
+  sliderTickActive: { color: colors.primary, fontWeight: '700' },
+  saveBtn: {
+    backgroundColor: colors.primary,
+    borderRadius: 10,
+    padding: 14,
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  saveBtnDisabled: { opacity: 0.6 },
+  saveBtnText: { color: colors.white, fontWeight: '700', fontSize: 15 },
   signOutBtn: {
     width: '100%',
     borderWidth: 1,
@@ -253,55 +284,4 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   signOutText: { color: colors.danger, fontWeight: '700', fontSize: 15 },
-  eldBtn: {
-    backgroundColor: colors.primary + '22',
-    borderWidth: 1,
-    borderColor: colors.primary,
-    borderRadius: 8,
-    padding: 12,
-    alignItems: 'center',
-    marginTop: 4,
-  },
-  eldBtnConnected: {
-    backgroundColor: colors.success + '11',
-    borderColor: colors.success,
-  },
-  eldBtnText: { color: colors.primary, fontWeight: '700', fontSize: 14 },
-  modalContainer: {
-    flex: 1,
-    backgroundColor: colors.bg,
-    padding: 24,
-    gap: 12,
-  },
-  modalTitle: { color: colors.text, fontSize: 22, fontWeight: '800', marginBottom: 4 },
-  modalSub: { color: colors.textMuted, fontSize: 14, lineHeight: 20 },
-  fieldLabel: { color: colors.textMuted, fontSize: 12, fontWeight: '700', textTransform: 'uppercase', marginTop: 8 },
-  platformPicker: { flexDirection: 'row', gap: 8 },
-  platformBtn: {
-    flex: 1, padding: 10, borderRadius: 8,
-    borderWidth: 1, borderColor: colors.border,
-    alignItems: 'center',
-  },
-  platformBtnActive: { backgroundColor: colors.primary + '22', borderColor: colors.primary },
-  platformText: { color: colors.textMuted, fontSize: 13, fontWeight: '600' },
-  platformTextActive: { color: colors.primary },
-  apiInput: {
-    backgroundColor: colors.bgCard,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 8,
-    padding: 14,
-    color: colors.text,
-    fontSize: 14,
-    fontFamily: 'monospace',
-  },
-  apiHint: { color: colors.textDim, fontSize: 12, lineHeight: 18 },
-  connectBtn: {
-    backgroundColor: colors.primary,
-    borderRadius: 10,
-    padding: 16,
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  connectBtnText: { color: colors.white, fontWeight: '800', fontSize: 16 },
 });

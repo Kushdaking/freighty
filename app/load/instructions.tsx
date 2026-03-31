@@ -275,11 +275,11 @@ export default function LoadInstructionsScreen() {
 }
 
 const styles = StyleSheet.create({
-  center: { flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' },
-  container: { flex: 1, backgroundColor: colors.background },
+  center: { flex: 1, backgroundColor: colors.bg, justifyContent: 'center', alignItems: 'center' },
+  container: { flex: 1, backgroundColor: colors.bg },
   content: { padding: 16 },
   header: {
-    backgroundColor: colors.surface,
+    backgroundColor: colors.bgCard,
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
@@ -300,7 +300,7 @@ const styles = StyleSheet.create({
   },
   badgeText: { fontSize: 11, fontWeight: '700', color: '#f59e0b' },
   vehicleSummary: {
-    backgroundColor: colors.surface,
+    backgroundColor: colors.bgCard,
     borderRadius: 12,
     padding: 12,
     marginBottom: 12,
@@ -318,7 +318,7 @@ const styles = StyleSheet.create({
   vehicleSub: { fontSize: 12, color: colors.textMuted },
   highValueBadge: { fontSize: 18 },
   section: {
-    backgroundColor: colors.surface,
+    backgroundColor: colors.bgCard,
     borderRadius: 12,
     padding: 14,
     marginBottom: 10,
@@ -338,6 +338,6 @@ const styles = StyleSheet.create({
   sectionTitleUrgent: { color: '#f59e0b' },
   item: { flexDirection: 'row', gap: 8, marginBottom: 6 },
   bullet: { fontSize: 14, color: colors.textMuted, marginTop: 1 },
-  itemText: { flex: 1, fontSize: 13, color: colors.textSecondary, lineHeight: 20 },
+  itemText: { flex: 1, fontSize: 13, color: colors.textMuted, lineHeight: 20 },
   itemTextUrgent: { color: colors.text },
 });
