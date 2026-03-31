@@ -1,34 +1,17 @@
-import { useEffect, useState } from 'react';
-import { Stack, router } from 'expo-router';
+import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { supabase } from '@/lib/supabase';
 import { colors } from '@/lib/colors';
 
+export unstable_settings = {
+  initialRouteName: 'index',
+};
+
 export default function RootLayout() {
-  const [ready, setReady] = useState(false);
-
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        router.replace('/(tabs)');
-      } else {
-        router.replace('/(auth)/login');
-      }
-      setReady(true);
-    });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_IN') router.replace('/(tabs)');
-      if (event === 'SIGNED_OUT') router.replace('/(auth)/login');
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
   return (
     <>
       <StatusBar style="light" />
       <Stack
+        initialRouteName="index"
         screenOptions={{
           headerStyle: { backgroundColor: colors.bg },
           headerTintColor: colors.text,
@@ -36,6 +19,7 @@ export default function RootLayout() {
           contentStyle: { backgroundColor: colors.bg },
         }}
       >
+        <Stack.Screen name="index" options={{ headerShown: false }} />
         <Stack.Screen name="(auth)" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="load" options={{ headerShown: false }} />
