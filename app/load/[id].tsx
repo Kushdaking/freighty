@@ -6,6 +6,8 @@ import {
 import { useLocalSearchParams, router, Stack } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { colors, statusColors } from '@/lib/colors';
+import { TrackingBanner } from '@/components/TrackingBanner';
+import { startTracking, stopTracking } from '@/lib/gps';
 import type { Shipment, ShipmentEvent } from '@/lib/types';
 
 export default function LoadDetailScreen() {
@@ -43,6 +45,11 @@ export default function LoadDetailScreen() {
         description: `Status updated to ${newStatus.replace(/_/g, ' ')}`,
         event_time: new Date().toISOString(),
       });
+
+      // Auto-start GPS when picked up, auto-stop when delivered
+      if (newStatus === 'picked_up') startTracking(id);
+      if (newStatus === 'delivered') stopTracking();
+
       setLoad((prev) => prev ? { ...prev, status: newStatus as any } : prev);
     } else {
       Alert.alert('Error', error.message);
@@ -83,6 +90,9 @@ export default function LoadDetailScreen() {
             {load.status.replace(/_/g, ' ').toUpperCase()}
           </Text>
         </View>
+
+        {/* GPS Tracking Banner */}
+        <TrackingBanner shipmentId={id} shipmentStatus={load.status} />
 
         {/* Next Action */}
         {nextAction && (

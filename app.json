@@ -17,7 +17,10 @@
       "bundleIdentifier": "com.haulify.carrier",
       "infoPlist": {
         "NSCameraUsageDescription": "Used to photograph vehicles at pickup and delivery",
-        "NSPhotoLibraryUsageDescription": "Used to upload vehicle photos and documents"
+        "NSPhotoLibraryUsageDescription": "Used to upload vehicle photos and documents",
+        "NSLocationWhenInUseUsageDescription": "Used to track your location while on a load",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Used to track your location in the background while transporting a load",
+        "UIBackgroundModes": ["location", "fetch"]
       }
     },
     "android": {
@@ -29,7 +32,12 @@
       "permissions": [
         "CAMERA",
         "READ_EXTERNAL_STORAGE",
-        "WRITE_EXTERNAL_STORAGE"
+        "WRITE_EXTERNAL_STORAGE",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_BACKGROUND_LOCATION",
+        "FOREGROUND_SERVICE",
+        "FOREGROUND_SERVICE_LOCATION"
       ]
     },
     "plugins": [
