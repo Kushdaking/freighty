@@ -172,14 +172,15 @@ export default function LoadDetailScreen() {
 
         {/* Quick Actions */}
         <View style={styles.quickActions}>
-          <QuickAction icon="🔍" label="Pickup\nInspection" onPress={() => router.push({ pathname: '/load/condition', params: { id, stage: 'pickup' } })} />
-          <QuickAction icon="✅" label="Delivery\nInspection" onPress={() => router.push({ pathname: '/load/condition', params: { id, stage: 'delivery' } })} />
-          <QuickAction icon="📄" label="Documents" onPress={() => router.push({ pathname: '/load/documents', params: { id } })} />
+          <QuickAction icon="📋" label="Pickup\neBOL" onPress={() => router.push({ pathname: '/load/bol', params: { id, stage: 'pickup' } })} />
+          <QuickAction icon="✅" label="Delivery\neBOL" onPress={() => router.push({ pathname: '/load/bol', params: { id, stage: 'delivery' } })} />
+          <QuickAction icon="🔍" label="Condition\nReport" onPress={() => router.push({ pathname: '/load/condition', params: { id, stage: 'pickup' } })} />
           <QuickAction icon="⚠️" label="Exception" onPress={() => router.push({ pathname: '/load/exception', params: { id } })} />
         </View>
         <View style={styles.quickActions}>
           <QuickAction icon="💬" label="Messages" onPress={() => router.push({ pathname: '/load/messages', params: { id } })} />
-          <QuickAction icon="📷" label="Extra\nPhotos" onPress={() => router.push({ pathname: '/load/photos', params: { id } })} />
+          <QuickAction icon="📄" label="Documents" onPress={() => router.push({ pathname: '/load/documents', params: { id } })} />
+          <QuickAction icon="📷" label="Photos" onPress={() => router.push({ pathname: '/load/photos', params: { id } })} />
         </View>
 
         {/* Timeline */}

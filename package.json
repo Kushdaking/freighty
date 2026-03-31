@@ -30,6 +30,7 @@
     "expo-device": "~6.0.0",
     "expo-location": "~18.0.0",
     "expo-task-manager": "~12.0.0",
+    "react-native-signature-canvas": "^4.7.2",
     "react-native-svg": "15.8.0",
     "react-native-url-polyfill": "^2.0.0"
   },
