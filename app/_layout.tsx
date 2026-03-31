@@ -13,16 +13,7 @@ export default function RootLayout() {
           headerTitleStyle: { fontWeight: '700' },
           contentStyle: { backgroundColor: colors.bg },
         }}
-      >
-        <Stack.Screen name="index" options={{ headerShown: false }} />
-        <Stack.Screen name="login" options={{ headerShown: false }} />
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="load/[id]" options={{ title: 'Load Details' }} />
-        <Stack.Screen name="load/photos" options={{ title: 'Upload Photos' }} />
-        <Stack.Screen name="load/documents" options={{ title: 'Documents' }} />
-        <Stack.Screen name="load/exception" options={{ title: 'Report Exception' }} />
-        <Stack.Screen name="load/messages" options={{ title: 'Messages' }} />
-      </Stack>
+      />
     </>
   );
 }
