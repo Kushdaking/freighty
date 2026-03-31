@@ -3,7 +3,8 @@ import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
   TextInput, ActivityIndicator, Alert, Modal,
 } from 'react-native';
-import { useLocalSearchParams, router, Stack } from 'expo-router';
+import { useLocalSearchParams, router, Stack, useFocusEffect } from 'expo-router';
+import { useCallback } from 'react';
 import SignatureCanvas from 'react-native-signature-canvas';
 import { supabase } from '@/lib/supabase';
 import { colors } from '@/lib/colors';
@@ -44,7 +45,9 @@ interface VehicleBOL {
 }
 
 export default function BOLScreen() {
-  const { id, stage } = useLocalSearchParams<{ id: string; stage: string }>();
+  const { id, stage, scannedVin, scannedVehicleIdx } = useLocalSearchParams<{
+    id: string; stage: string; scannedVin?: string; scannedVehicleIdx?: string;
+  }>();
   const isPickup = stage !== 'delivery';
   const title = isPickup ? 'Pickup BOL' : 'Delivery BOL';
 
@@ -61,6 +64,18 @@ export default function BOLScreen() {
   const [loading, setLoading] = useState(true);
 
   const sigRef = useRef<any>(null);
+
+  // Handle returned VIN from scanner
+  useFocusEffect(
+    useCallback(() => {
+      if (scannedVin && scannedVehicleIdx !== undefined) {
+        const idx = parseInt(scannedVehicleIdx);
+        if (!isNaN(idx)) {
+          updateVehicle(idx, { vinConfirmed: false, vinMismatch: scannedVin });
+        }
+      }
+    }, [scannedVin, scannedVehicleIdx])
+  );
 
   useEffect(() => {
     async function load() {
@@ -389,6 +404,21 @@ export default function BOLScreen() {
               </Text>
             </TouchableOpacity>
           </View>
+          <TouchableOpacity
+            style={styles.scanVinBtn}
+            onPress={() => router.push({
+              pathname: '/vin-scanner',
+              params: {
+                returnTo: `/load/bol`,
+                field: 'vin',
+                returnId: id,
+                returnStage: stage,
+                returnVehicleIdx: String(currentVehicleIdx),
+              }
+            })}
+          >
+            <Text style={styles.scanVinText}>📷 Scan VIN with Camera</Text>
+          </TouchableOpacity>
         </View>
 
         {/* Condition */}
@@ -569,6 +599,11 @@ const styles = StyleSheet.create({
   vinBtnText: { color: colors.textMuted, fontSize: 13, fontWeight: '600' },
   vinBtnTextActive: { color: colors.success },
   vinBtnTextMismatch: { color: colors.danger },
+  scanVinBtn: {
+    borderWidth: 1, borderColor: colors.primary, borderRadius: 8,
+    padding: 10, alignItems: 'center', marginTop: 4,
+  },
+  scanVinText: { color: colors.primary, fontSize: 13, fontWeight: '600' },
   conditionRow: { flexDirection: 'row', gap: 8 },
   conditionBtn: {
     flex: 1, borderWidth: 1, borderColor: colors.border,

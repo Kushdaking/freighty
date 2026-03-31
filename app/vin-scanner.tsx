@@ -20,7 +20,9 @@ function cleanVin(raw: string): string {
 }
 
 export default function VINScannerScreen() {
-  const { returnTo, field } = useLocalSearchParams<{ returnTo: string; field: string }>();
+  const { returnTo, field, returnId, returnStage, returnVehicleIdx } = useLocalSearchParams<{
+    returnTo: string; field: string; returnId?: string; returnStage?: string; returnVehicleIdx?: string;
+  }>();
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
   const [lastScan, setLastScan] = useState('');
@@ -60,12 +62,23 @@ export default function VINScannerScreen() {
         {
           text: 'Use VIN',
           onPress: () => {
-            // Navigate back with the VIN as a param
-            router.back();
-            // Use a small delay to let navigation settle before pushing param
-            setTimeout(() => {
-              router.setParams({ scannedVin: vin, vinField: field || 'vin' });
-            }, 50);
+            // Navigate back to BOL with the scanned VIN
+            if (returnId) {
+              router.replace({
+                pathname: '/load/bol',
+                params: {
+                  id: returnId,
+                  stage: returnStage ?? 'pickup',
+                  scannedVin: vin,
+                  scannedVehicleIdx: returnVehicleIdx ?? '0',
+                }
+              });
+            } else {
+              router.back();
+              setTimeout(() => {
+                router.setParams({ scannedVin: vin, vinField: field || 'vin' });
+              }, 50);
+            }
           },
         },
       ]

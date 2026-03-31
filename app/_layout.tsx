@@ -47,6 +47,7 @@ export default function RootLayout() {
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="load" options={{ headerShown: false }} />
         <Stack.Screen name="onboarding" options={{ headerShown: false }} />
+        <Stack.Screen name="vin-scanner" options={{ title: 'Scan VIN', presentation: 'modal' }} />
       </Stack>
     </>
   );

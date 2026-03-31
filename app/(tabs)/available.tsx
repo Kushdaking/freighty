@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import {
   View, Text, FlatList, TouchableOpacity,
-  StyleSheet, RefreshControl, ActivityIndicator, Alert,
+  StyleSheet, RefreshControl, ActivityIndicator,
 } from 'react-native';
 import { router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
@@ -62,40 +62,11 @@ export default function AvailableLoadsScreen() {
 }
 
 function AvailableCard({ load, onRefresh }: { load: Shipment; onRefresh: () => void }) {
-  const [accepting, setAccepting] = useState(false);
   const vehicleCount = load.vehicles?.length ?? 0;
 
-  async function acceptLoad() {
-    Alert.alert(
-      'Accept Load',
-      `Accept load ${load.tracking_number} for $${load.total_price?.toLocaleString() ?? 'TBD'}?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Accept',
-          onPress: async () => {
-            setAccepting(true);
-            const { data: { user } } = await supabase.auth.getUser();
-            const { error } = await supabase
-              .from('shipments')
-              .update({
-                carrier_status: 'accepted',
-                carrier_user_id: user?.id,
-                carrier_accepted_at: new Date().toISOString(),
-              })
-              .eq('id', load.id);
-
-            setAccepting(false);
-            if (error) {
-              Alert.alert('Error', error.message);
-            } else {
-              Alert.alert('✅ Load Accepted', 'This load is now in your list.');
-              onRefresh();
-            }
-          },
-        },
-      ]
-    );
+  function reviewLoad() {
+    // Route to rate confirmation screen before accepting
+    router.push({ pathname: '/load/rate-confirm', params: { id: load.id } });
   }
 
   return (
@@ -139,14 +110,10 @@ function AvailableCard({ load, onRefresh }: { load: Shipment; onRefresh: () => v
           <Text style={styles.rate}>${load.total_price.toLocaleString()}</Text>
         )}
         <TouchableOpacity
-          style={[styles.acceptBtn, accepting && styles.btnDisabled]}
-          onPress={acceptLoad}
-          disabled={accepting}
+          style={styles.acceptBtn}
+          onPress={reviewLoad}
         >
-          {accepting
-            ? <ActivityIndicator size="small" color={colors.white} />
-            : <Text style={styles.acceptText}>Accept Load</Text>
-          }
+          <Text style={styles.acceptText}>Review & Accept</Text>
         </TouchableOpacity>
       </View>
     </TouchableOpacity>
@@ -187,6 +154,5 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 10,
   },
-  btnDisabled: { opacity: 0.6 },
   acceptText: { color: colors.white, fontWeight: '700', fontSize: 14 },
 });
