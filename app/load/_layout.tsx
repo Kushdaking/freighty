@@ -13,6 +13,7 @@ export default function LoadLayout() {
     >
       <Stack.Screen name="[id]" options={{ title: 'Load Details' }} />
       <Stack.Screen name="photos" options={{ title: 'Upload Photos' }} />
+      <Stack.Screen name="condition" options={{ title: 'Condition Report' }} />
       <Stack.Screen name="documents" options={{ title: 'Documents' }} />
       <Stack.Screen name="exception" options={{ title: 'Report Exception' }} />
       <Stack.Screen name="messages" options={{ title: 'Messages' }} />
