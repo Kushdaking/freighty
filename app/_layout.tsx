@@ -1,27 +1,37 @@
 import { useEffect, useState } from 'react';
-import { Stack, router } from 'expo-router';
+import { Stack, router, SplashScreen } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { supabase } from '@/lib/supabase';
 import { colors } from '@/lib/colors';
 
+SplashScreen.preventAutoHideAsync();
+
 export default function RootLayout() {
   const [initialized, setInitialized] = useState(false);
+  const [session, setSession] = useState<any>(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!session) {
-        router.replace('/login');
-      }
+      setSession(session);
       setInitialized(true);
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_OUT') router.replace('/login');
-      if (event === 'SIGNED_IN') router.replace('/(tabs)');
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
     });
 
     return () => subscription.unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (!initialized) return;
+    SplashScreen.hideAsync();
+    if (session) {
+      router.replace('/(tabs)');
+    } else {
+      router.replace('/login');
+    }
+  }, [initialized, session]);
 
   if (!initialized) return null;
 
