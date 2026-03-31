@@ -35,6 +35,16 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="routes"
+        options={{
+          title: 'On My Route',
+          tabBarLabel: 'On Route',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="navigate-outline" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="history"
         options={{
           title: 'Load History',

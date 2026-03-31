@@ -8,6 +8,7 @@ import { supabase } from '@/lib/supabase';
 import { colors, statusColors } from '@/lib/colors';
 import { TrackingBanner } from '@/components/TrackingBanner';
 import { startTracking, stopTracking } from '@/lib/gps';
+import { onLoadDelivered } from '@/lib/routeMatcher';
 import type { Shipment, ShipmentEvent } from '@/lib/types';
 
 export default function LoadDetailScreen() {
@@ -84,7 +85,22 @@ export default function LoadDetailScreen() {
 
       // Auto-start GPS when picked up, auto-stop when delivered
       if (newStatus === 'picked_up') startTracking(id);
-      if (newStatus === 'delivered') stopTracking();
+      if (newStatus === 'delivered') {
+        stopTracking();
+        // Find next load on return route and notify carrier
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: carrierUser } = await supabase
+            .from('carrier_users')
+            .select('id')
+            .eq('auth_user_id', user.id)
+            .single();
+          if (carrierUser) {
+            // Run async — don't block the UI
+            onLoadDelivered(carrierUser.id).catch(console.warn);
+          }
+        }
+      }
 
       setLoad((prev) => prev ? { ...prev, status: newStatus as any } : prev);
     } else {
