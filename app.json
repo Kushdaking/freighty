@@ -36,6 +36,14 @@
       "expo-router",
       "expo-secure-store",
       [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#2563eb",
+          "sounds": []
+        }
+      ],
+      [
         "expo-camera",
         {
           "cameraPermission": "Allow Freight Flow to access your camera to photograph vehicles."

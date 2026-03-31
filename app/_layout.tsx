@@ -1,17 +1,40 @@
-import { Stack } from 'expo-router';
+import { useEffect, useRef } from 'react';
+import { Stack, router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import * as Notifications from 'expo-notifications';
 import { colors } from '@/lib/colors';
-
-export unstable_settings = {
-  initialRouteName: 'index',
-};
+import { setupPushNotifications, getNotificationRoute } from '@/lib/notifications';
 
 export default function RootLayout() {
+  const notificationListener = useRef<any>();
+  const responseListener = useRef<any>();
+
+  useEffect(() => {
+    // Register for push notifications
+    setupPushNotifications();
+
+    // Listen for incoming notifications while app is open
+    notificationListener.current = Notifications.addNotificationReceivedListener(notification => {
+      console.log('Notification received:', notification);
+    });
+
+    // Handle notification taps — navigate to the right screen
+    responseListener.current = Notifications.addNotificationResponseReceivedListener(response => {
+      const { type, ...data } = response.notification.request.content.data ?? {};
+      const route = getNotificationRoute(type as any, data);
+      if (route) router.push(route as any);
+    });
+
+    return () => {
+      Notifications.removeNotificationSubscription(notificationListener.current);
+      Notifications.removeNotificationSubscription(responseListener.current);
+    };
+  }, []);
+
   return (
     <>
       <StatusBar style="light" />
       <Stack
-        initialRouteName="index"
         screenOptions={{
           headerStyle: { backgroundColor: colors.bg },
           headerTintColor: colors.text,

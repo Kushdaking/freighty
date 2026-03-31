@@ -6,6 +6,7 @@ import {
 import { useLocalSearchParams } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { colors } from '@/lib/colors';
+import { sendPushNotification } from '@/lib/notifications';
 
 interface Message {
   id: string;
@@ -76,6 +77,14 @@ export default function MessagesScreen() {
       sender_type: 'carrier',
       sender_name: carrierName,
       message: msg,
+    });
+
+    // Notify dispatcher (handled server-side via webhook/realtime)
+    await sendPushNotification({
+      type: 'message',
+      title: `Message from ${carrierName}`,
+      body: msg.length > 80 ? msg.slice(0, 80) + '...' : msg,
+      data: { shipmentId: id },
     });
 
     setSending(false);
