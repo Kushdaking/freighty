@@ -61,7 +61,40 @@ export default function VINScannerScreen() {
         },
         {
           text: 'Use VIN',
-          onPress: () => {
+          onPress: async () => {
+            // Auto-decode VIN via NHTSA in background
+            let highValueFlag = false;
+            let decodedMake = '';
+            let decodedYear = 0;
+            try {
+              const decodeRes = await fetch(
+                `https://vpic.nhtsa.dot.gov/api/vehicles/decodevin/${vin}?format=json`,
+                { signal: AbortSignal.timeout(5000) }
+              );
+              if (decodeRes.ok) {
+                const decodeData = await decodeRes.json();
+                const results = decodeData?.Results ?? [];
+                const makeItem = results.find((r: any) => r.Variable === 'Make');
+                const yearItem = results.find((r: any) => r.Variable === 'Model Year');
+                decodedMake = makeItem?.Value ?? '';
+                decodedYear = parseInt(yearItem?.Value ?? '0') || 0;
+                const luxuryMakes = ['Ferrari','Lamborghini','Porsche','Maserati','Bentley','Rolls-Royce','McLaren','Aston Martin','Bugatti'];
+                const premiumMakes = ['BMW','Mercedes-Benz','Audi','Lexus','Cadillac','Land Rover','Jaguar'];
+                if (luxuryMakes.some(m => decodedMake.includes(m))) highValueFlag = true;
+                if (decodedYear >= 2022 && premiumMakes.some(m => decodedMake.includes(m))) highValueFlag = true;
+              }
+            } catch {
+              // Decode failed — proceed without it
+            }
+
+            if (highValueFlag) {
+              Alert.alert(
+                '💎 HIGH VALUE VEHICLE',
+                `${decodedYear} ${decodedMake}\n\nThis vehicle requires special handling:\n• Enclosed transport recommended\n• Extra care with tie-downs\n• Document all pre-existing condition\n\nThis load will be flagged for dispatcher review.`,
+                [{ text: 'Understood', style: 'default' }]
+              );
+            }
+
             // Navigate back to BOL with the scanned VIN
             if (returnId) {
               router.replace({

@@ -177,6 +177,14 @@ export default function LoadDetailScreen() {
           <QuickAction icon="🔍" label="Condition\nReport" onPress={() => router.push({ pathname: '/load/condition', params: { id, stage: 'pickup' } })} />
           <QuickAction icon="⚠️" label="Exception" onPress={() => router.push({ pathname: '/load/exception', params: { id } })} />
         </View>
+
+        {/* Load Instructions */}
+        <TouchableOpacity
+          style={styles.instructionsBtn}
+          onPress={() => router.push({ pathname: '/load/instructions', params: { id } })}
+        >
+          <Text style={styles.instructionsBtnText}>📋 Load Instructions — Loading Guide</Text>
+        </TouchableOpacity>
         <View style={styles.quickActions}>
           <QuickAction icon="💬" label="Messages" onPress={() => router.push({ pathname: '/load/messages', params: { id } })} />
           <QuickAction icon="📄" label="Documents" onPress={() => router.push({ pathname: '/load/documents', params: { id } })} />
@@ -289,4 +297,13 @@ const styles = StyleSheet.create({
   infoRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 8 },
   infoLabel: { color: colors.textMuted, fontSize: 13, flex: 1 },
   infoValue: { color: colors.text, fontSize: 13, fontWeight: '600', flex: 1, textAlign: 'right' },
+  instructionsBtn: {
+    backgroundColor: '#1e3a5f',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#3b82f6',
+    padding: 14,
+    alignItems: 'center',
+  },
+  instructionsBtnText: { color: '#60a5fa', fontWeight: '700', fontSize: 14 },
 });

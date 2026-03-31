@@ -53,7 +53,9 @@ export default function BOLScreen() {
 
   const [load, setLoad] = useState<Shipment | null>(null);
   const [vehicles, setVehicles] = useState<VehicleBOL[]>([]);
-  const [step, setStep] = useState<'vehicles' | 'damages' | 'signature' | 'customer_sig' | 'complete'>('vehicles');
+  const [step, setStep] = useState<'id_check' | 'vehicles' | 'damages' | 'signature' | 'customer_sig' | 'complete'>('id_check');
+  const [idStatus, setIdStatus] = useState<'loading' | 'ok' | 'missing' | 'pending'>('loading');
+  const [idDocUrl, setIdDocUrl] = useState<string | null>(null);
   const [currentVehicleIdx, setCurrentVehicleIdx] = useState(0);
   const [carrierSig, setCarrierSig] = useState<string | null>(null);
   const [customerSig, setCustomerSig] = useState<string | null>(null);
@@ -64,6 +66,31 @@ export default function BOLScreen() {
   const [loading, setLoading] = useState(true);
 
   const sigRef = useRef<any>(null);
+
+  // Driver ID pre-flight check on mount
+  useEffect(() => {
+    async function checkDriverId() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { setIdStatus('missing'); return; }
+
+      const { data: carrier } = await supabase
+        .from('carrier_users')
+        .select('id_document_url, id_document_verified')
+        .eq('auth_user_id', user.id)
+        .single();
+
+      if (!carrier?.id_document_url) {
+        setIdStatus('missing');
+      } else if (!carrier.id_document_verified) {
+        setIdStatus('pending');
+        setIdDocUrl(carrier.id_document_url);
+      } else {
+        setIdStatus('ok');
+        setStep('vehicles'); // Pass the preflight check
+      }
+    }
+    checkDriverId();
+  }, []);
 
   // Handle returned VIN from scanner
   useFocusEffect(
@@ -207,6 +234,60 @@ export default function BOLScreen() {
       Alert.alert('Error', err.message ?? 'Failed to submit BOL');
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  // ─── DRIVER ID PREFLIGHT CHECK ─────────────────────────────────────────
+  if (step === 'id_check' || idStatus === 'loading') {
+    if (idStatus === 'loading') {
+      return (
+        <View style={styles.center}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={{ color: colors.textMuted, marginTop: 12, fontSize: 13 }}>Checking driver ID...</Text>
+        </View>
+      );
+    }
+
+    if (idStatus === 'missing') {
+      return (
+        <View style={[styles.center, { padding: 32 }]}>
+          <Stack.Screen options={{ title: 'Driver ID Required' }} />
+          <Text style={{ fontSize: 48, marginBottom: 16 }}>🪪</Text>
+          <Text style={{ fontSize: 20, fontWeight: '800', color: colors.text, textAlign: 'center', marginBottom: 8 }}>
+            Upload Driver ID to Proceed
+          </Text>
+          <Text style={{ fontSize: 14, color: colors.textMuted, textAlign: 'center', marginBottom: 32, lineHeight: 20 }}>
+            A valid government-issued ID must be on file before you can complete a Bill of Lading. Upload your ID in your profile and a dispatcher will verify it.
+          </Text>
+          <TouchableOpacity
+            style={[styles.doneBtn, { backgroundColor: colors.primary }]}
+            onPress={() => router.push('/(tabs)/profile')}
+          >
+            <Text style={styles.doneBtnText}>Go to Profile → Upload ID</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => router.back()} style={{ marginTop: 16 }}>
+            <Text style={{ color: colors.textMuted, fontSize: 13 }}>Cancel</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
+    if (idStatus === 'pending') {
+      return (
+        <View style={[styles.center, { padding: 32 }]}>
+          <Stack.Screen options={{ title: 'ID Pending Verification' }} />
+          <Text style={{ fontSize: 48, marginBottom: 16 }}>⏳</Text>
+          <Text style={{ fontSize: 20, fontWeight: '800', color: colors.text, textAlign: 'center', marginBottom: 8 }}>
+            ID Pending Verification
+          </Text>
+          <Text style={{ fontSize: 14, color: colors.textMuted, textAlign: 'center', marginBottom: 32, lineHeight: 20 }}>
+            Your driver ID has been uploaded and is waiting for dispatcher approval. You'll be able to proceed once verified.
+          </Text>
+          <TouchableOpacity onPress={() => router.back()} style={[styles.doneBtn, { backgroundColor: '#334155' }]}>
+            <Text style={styles.doneBtnText}>Back to Load</Text>
+          </TouchableOpacity>
+        </View>
+      );
     }
   }
 

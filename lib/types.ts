@@ -66,6 +66,28 @@ export interface CarrierUser {
   fmcsa_status: string;
   is_verified: boolean;
   profile_photo_url: string | null;
+  // Route profile fields
+  home_base_city: string | null;
+  home_base_state: string | null;
+  home_base_lat: number | null;
+  home_base_lng: number | null;
+  preferred_corridors: Array<{ origin_state: string; destination_state: string }> | null;
+  max_deadhead_miles: number | null;
+  next_available_location_city: string | null;
+  next_available_location_state: string | null;
+  next_available_location_lat: number | null;
+  next_available_location_lng: number | null;
+  next_available_at: string | null;
+  // GPS
+  current_lat: number | null;
+  current_lng: number | null;
+}
+
+export interface RouteMatch extends Shipment {
+  pickup_detour_miles: number;
+  delivery_detour_miles: number;
+  total_detour: number;
+  deadhead_score: 'green' | 'yellow' | 'red';
 }
 
 export interface CarrierLoadToken {

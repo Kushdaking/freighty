@@ -196,6 +196,11 @@ function AvailableCard({
       <View style={styles.cardHeader}>
         <Text style={styles.trackingNum}>{load.tracking_number}</Text>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          {(load as any).vehicles?.some((v: any) => v.high_value_flag) && (
+            <View style={styles.highValueBadge}>
+              <Text style={styles.highValueText}>💎 HIGH VALUE</Text>
+            </View>
+          )}
           {load.is_expedited && <Text style={styles.expedited}>⚡ EXP</Text>}
           <TouchableOpacity onPress={onToggleBookmark} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
             <Text style={[styles.bookmark, isBookmarked && styles.bookmarkActive]}>
@@ -315,9 +320,18 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     gap: 12,
   },
-  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 4 },
   trackingNum: { color: colors.text, fontWeight: '700', fontSize: 15 },
   expedited: { color: colors.accent, fontSize: 12, fontWeight: '700' },
+  highValueBadge: {
+    backgroundColor: '#7c3aed22',
+    borderWidth: 1,
+    borderColor: '#7c3aed',
+    borderRadius: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  highValueText: { color: '#a78bfa', fontSize: 11, fontWeight: '700' },
   bookmark: { fontSize: 18 },
   bookmarkActive: { opacity: 1 },
 
