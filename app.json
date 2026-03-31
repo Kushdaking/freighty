@@ -70,7 +70,7 @@
     },
     "extra": {
       "eas": {
-        "projectId": "freight-flow-carrier"
+        "projectId": "bfdfd9a9-9b4b-49c0-b43a-67001069dda5"
       },
       "supabaseUrl": "https://ruyulhpkuxcjoylxrfyz.supabase.co",
       "supabaseAnonKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ1eXVsaHBrdXhjam95bHhyZnl6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4ODY0MTgsImV4cCI6MjA5MDQ2MjQxOH0.83RMuNlboUetr_16j9BCZ8-xjDtjpnK9MaKJxQoBBgg"
