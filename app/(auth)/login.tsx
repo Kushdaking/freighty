@@ -15,9 +15,13 @@ export default function LoginScreen() {
   async function handleLogin() {
     if (!email || !password) return Alert.alert('Error', 'Enter your email and password.');
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
-    if (error) Alert.alert('Login Failed', error.message);
+    if (error) {
+      Alert.alert('Login Failed', error.message);
+    } else if (data.session) {
+      router.replace('/(tabs)');
+    }
   }
 
   return (
