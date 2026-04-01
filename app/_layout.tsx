@@ -1,5 +1,4 @@
 import { useEffect, useRef } from 'react';
-import { I18nProvider } from '@/lib/i18n';
 import { View } from 'react-native';
 import { Stack, router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -35,7 +34,6 @@ export default function RootLayout() {
   }, []);
 
   return (
-    <I18nProvider>
     <View style={{ flex: 1 }}>
       <StatusBar style="light" />
       <OfflineIndicator />
@@ -55,6 +53,5 @@ export default function RootLayout() {
         <Stack.Screen name="vin-scanner" options={{ title: 'Scan VIN', presentation: 'modal' }} />
       </Stack>
     </View>
-    </I18nProvider>
   );
 }
