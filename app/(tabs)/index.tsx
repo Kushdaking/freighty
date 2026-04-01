@@ -255,12 +255,21 @@ export default function MapHomeScreen() {
     let mounted = true;
 
     (async () => {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') return;
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== 'granted') return;
+      } catch (permErr) {
+        console.warn('Location permission error:', permErr);
+        return;
+      }
+
+      // Small delay to let the permission dialog fully dismiss before starting GPS
+      await new Promise(resolve => setTimeout(resolve, 500));
+      if (!mounted) return;
 
       try {
         locationSubRef.current = await Location.watchPositionAsync(
-          { accuracy: Location.Accuracy.Balanced, timeInterval: 8000, distanceInterval: 30 },
+          { accuracy: Location.Accuracy.Low, timeInterval: 10000, distanceInterval: 50 },
           (loc) => {
             if (!mounted) return;
             const coords: Coords = {
@@ -366,7 +375,7 @@ export default function MapHomeScreen() {
         style={StyleSheet.absoluteFillObject}
         provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
         initialRegion={US_CENTER}
-        showsUserLocation
+        showsUserLocation={false}
         customMapStyle={darkMapStyle}
         showsCompass={false}
         showsMyLocationButton={false}
