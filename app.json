@@ -10,7 +10,7 @@
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
-      "backgroundColor": "#1a1f2e"
+      "backgroundColor": "#2E4057"
     },
     "ios": {
       "supportsTablet": false,
@@ -25,7 +25,7 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#1a1f2e"
+        "backgroundColor": "#2E4057"
       },
       "package": "com.prevaylos.carrier",
       "permissions": [
