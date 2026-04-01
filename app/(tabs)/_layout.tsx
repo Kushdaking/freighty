@@ -17,10 +17,11 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'My Loads',
-          tabBarLabel: 'Loads',
+          title: 'Map',
+          tabBarLabel: 'Map',
+          headerShown: false,
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="list" size={size} color={color} />
+            <Ionicons name="map" size={size} color={color} />
           ),
         }}
       />

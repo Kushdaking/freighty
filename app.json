@@ -17,14 +17,9 @@
       "bundleIdentifier": "com.prevaylos.carrier",
       "appleTeamId": "732JYMAYFP",
       "infoPlist": {
-        "NSCameraUsageDescription": "Used to photograph vehicles at pickup and delivery",
-        "NSPhotoLibraryUsageDescription": "Used to upload vehicle photos and documents",
-        "NSLocationWhenInUseUsageDescription": "Used to track your location while on a load",
-        "NSLocationAlwaysAndWhenInUseUsageDescription": "Used to track your location in the background while transporting a load",
-        "UIBackgroundModes": [
-          "location",
-          "fetch"
-        ]
+        "NSLocationWhenInUseUsageDescription": "Prevayl uses your location to show your position on the map and find nearby truck stops.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Prevayl uses your background location to update dispatch with your position while driving.",
+        "NSLocationAlwaysUsageDescription": "Prevayl uses your background location to update dispatch with your position while driving."
       }
     },
     "android": {
@@ -42,7 +37,12 @@
         "ACCESS_BACKGROUND_LOCATION",
         "FOREGROUND_SERVICE",
         "FOREGROUND_SERVICE_LOCATION"
-      ]
+      ],
+      "config": {
+        "googleMaps": {
+          "apiKey": "placeholder_google_maps_api_key"
+        }
+      }
     },
     "plugins": [
       "expo-router",
@@ -65,6 +65,19 @@
         "expo-image-picker",
         {
           "photosPermission": "Allow Freight Flow to access your photos for vehicle documentation."
+        }
+      ],
+      [
+        "react-native-maps",
+        {
+          "googleMapsApiKey": "placeholder_google_maps_api_key"
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Prevayl uses your location to show your position and find nearby truck stops.",
+          "isAndroidBackgroundLocationEnabled": true
         }
       ]
     ],
