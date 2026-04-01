@@ -4,6 +4,7 @@ import {
   StyleSheet, KeyboardAvoidingView, Platform, ActivityIndicator, Alert,
   StatusBar,
 } from 'react-native';
+import Svg, { Path, Circle, Polygon, Rect, G, Defs, LinearGradient, Stop } from 'react-native-svg';
 import { router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 
@@ -42,8 +43,28 @@ export default function LoginScreen() {
       <View style={s.inner}>
         {/* Prevayl Logo + Wordmark */}
         <View style={s.logoSection}>
+          {/* SVG Logo Mark */}
           <View style={s.logoMark}>
-            <Text style={s.logoIcon}>🚛</Text>
+            <Svg width={80} height={80} viewBox="0 0 100 100">
+              <Defs>
+                <LinearGradient id="goldGrad" x1="0" y1="0" x2="0" y2="1">
+                  <Stop offset="0" stopColor="#D4AF5A" />
+                  <Stop offset="1" stopColor="#A8832A" />
+                </LinearGradient>
+              </Defs>
+              {/* Map outline shape */}
+              <Path
+                d="M50 8 C30 8 14 24 14 44 C14 64 50 92 50 92 C50 92 86 64 86 44 C86 24 70 8 50 8 Z"
+                fill="url(#goldGrad)"
+              />
+              {/* Inner circle */}
+              <Circle cx={50} cy={44} r={14} fill="#0a0f1a" />
+              {/* Route dot */}
+              <Circle cx={50} cy={44} r={6} fill="#C9A84C" />
+              {/* Dashed route lines */}
+              <Path d="M30 30 L50 44" stroke="#ffffff" strokeWidth={2} strokeDasharray="3,3" opacity={0.5} />
+              <Path d="M50 44 L70 35" stroke="#ffffff" strokeWidth={2} strokeDasharray="3,3" opacity={0.5} />
+            </Svg>
           </View>
           <Text style={s.wordmark}>PREVAYL</Text>
           <Text style={s.tagline}>MOVE SMARTER. PREVAYL.</Text>

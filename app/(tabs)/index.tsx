@@ -12,6 +12,25 @@ import {
   Dimensions,
   ActivityIndicator,
 } from 'react-native';
+import Svg, { Path, Circle, Defs, LinearGradient, Stop } from 'react-native-svg';
+
+function PrevaylLogo({ size = 28 }: { size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 100 100">
+      <Defs>
+        <LinearGradient id="hgold" x1="0" y1="0" x2="0" y2="1">
+          <Stop offset="0" stopColor="#D4AF5A" />
+          <Stop offset="1" stopColor="#A8832A" />
+        </LinearGradient>
+      </Defs>
+      <Path d="M50 8 C30 8 14 24 14 44 C14 64 50 92 50 92 C50 92 86 64 86 44 C86 24 70 8 50 8 Z" fill="url(#hgold)" />
+      <Circle cx={50} cy={44} r={14} fill="#0a0f1a" />
+      <Circle cx={50} cy={44} r={6} fill="#C9A84C" />
+      <Path d="M30 30 L50 44" stroke="#ffffff" strokeWidth={2} strokeDasharray="3,3" opacity={0.5} />
+      <Path d="M50 44 L70 35" stroke="#ffffff" strokeWidth={2} strokeDasharray="3,3" opacity={0.5} />
+    </Svg>
+  );
+}
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
 import * as Location from 'expo-location';
@@ -239,39 +258,43 @@ export default function MapHomeScreen() {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') return;
 
-      locationSubRef.current = await Location.watchPositionAsync(
-        { accuracy: Location.Accuracy.High, timeInterval: 5000, distanceInterval: 20 },
-        (loc) => {
-          if (!mounted) return;
-          const coords: Coords = {
-            latitude: loc.coords.latitude,
-            longitude: loc.coords.longitude,
-          };
-          setUserLocation(coords);
+      try {
+        locationSubRef.current = await Location.watchPositionAsync(
+          { accuracy: Location.Accuracy.Balanced, timeInterval: 8000, distanceInterval: 30 },
+          (loc) => {
+            if (!mounted) return;
+            const coords: Coords = {
+              latitude: loc.coords.latitude,
+              longitude: loc.coords.longitude,
+            };
+            setUserLocation(coords);
 
-          // Animate camera on first fix
-          if (firstFix.current) {
-            firstFix.current = false;
-            mapRef.current?.animateToRegion(
-              { ...coords, latitudeDelta: 0.15, longitudeDelta: 0.15 },
-              1200
-            );
-            // Fetch nearby POIs
-            fetchNearbyPOI(coords.latitude, coords.longitude).then(setPois);
-          }
+            // Animate camera on first fix
+            if (firstFix.current) {
+              firstFix.current = false;
+              mapRef.current?.animateToRegion(
+                { ...coords, latitudeDelta: 0.15, longitudeDelta: 0.15 },
+                1200
+              );
+              // Fetch nearby POIs
+              fetchNearbyPOI(coords.latitude, coords.longitude).then(setPois);
+            }
 
-          // Supabase update every 60s
-          const now = Date.now();
-          if (carrierId && now - lastLocationUpdate.current > 60000) {
-            lastLocationUpdate.current = now;
-            supabase
-              .from('carrier_users')
-              .update({ current_lat: coords.latitude, current_lng: coords.longitude })
-              .eq('id', carrierId)
-              .then(() => {});
+            // Supabase update every 60s
+            const now = Date.now();
+            if (carrierId && now - lastLocationUpdate.current > 60000) {
+              lastLocationUpdate.current = now;
+              supabase
+                .from('carrier_users')
+                .update({ current_lat: coords.latitude, current_lng: coords.longitude })
+                .eq('id', carrierId)
+                .then(() => {});
+            }
           }
-        }
-      );
+        );
+      } catch (locErr) {
+        console.warn('Location watch failed:', locErr);
+      }
     })();
 
     return () => {
@@ -398,7 +421,10 @@ export default function MapHomeScreen() {
       {/* HEADER BAR */}
       <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
         <View style={styles.headerLeft}>
-          <Text style={styles.headerBrand}>🚛 PREVAYL</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <PrevaylLogo size={26} />
+            <Text style={styles.headerBrand}>PREVAYL</Text>
+          </View>
           <Text style={styles.headerSub}>{carrierName.toUpperCase()}</Text>
         </View>
         <View style={styles.headerCenter}>
