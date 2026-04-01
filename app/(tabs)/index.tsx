@@ -360,11 +360,11 @@ export default function MapHomeScreen() {
 
   return (
     <View style={styles.container}>
-      {/* MAP — full screen background */}
+      {/* MAP — deferred render to avoid Google Maps SDK crash on startup */}
       <AMapView
         ref={mapRef}
         style={StyleSheet.absoluteFillObject}
-        provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
+        provider={undefined}
         initialRegion={US_CENTER}
         showsUserLocation={false}
         customMapStyle={darkMapStyle}
