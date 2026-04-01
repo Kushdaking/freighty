@@ -1,7 +1,9 @@
 import { useEffect, useState, useCallback } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, RefreshControl, ActivityIndicator, Dimensions,
+  TouchableOpacity,
 } from 'react-native';
+import { router } from 'expo-router';
 import Svg, { Rect, Text as SvgText, G, Line } from 'react-native-svg';
 import { supabase } from '@/lib/supabase';
 import { colors } from '@/lib/colors';
@@ -255,6 +257,20 @@ export default function EarningsScreen() {
       style={styles.container}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
     >
+      {/* Receipt Scanner CTA */}
+      <TouchableOpacity
+        style={scannerBtn}
+        onPress={() => router.push('/receipt-scanner')}
+        activeOpacity={0.8}
+      >
+        <Text style={{ fontSize: 24 }}>🧾</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={{ color: '#0a0f1a', fontSize: 16, fontWeight: '900', letterSpacing: 0.5 }}>SCAN A RECEIPT</Text>
+          <Text style={{ color: 'rgba(10,15,26,0.7)', fontSize: 13, marginTop: 2 }}>Snap fuel, tolls, repairs — AI extracts the details</Text>
+        </View>
+        <Text style={{ fontSize: 20 }}>→</Text>
+      </TouchableOpacity>
+
       {/* Summary Cards */}
       <View style={styles.summaryGrid}>
         <View style={[styles.summaryCard, { borderColor: colors.success + '55' }]}>
@@ -328,6 +344,12 @@ export default function EarningsScreen() {
     </ScrollView>
   );
 }
+
+const scannerBtn = {
+  flexDirection: 'row' as const, alignItems: 'center' as const, gap: 14,
+  backgroundColor: '#C9A84C', borderRadius: 14, padding: 16, margin: 16, marginBottom: 8,
+  shadowColor: '#C9A84C', shadowOpacity: 0.35, shadowRadius: 10, elevation: 6,
+};
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
