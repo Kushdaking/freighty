@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "Freight Flow Carrier",
-    "slug": "freight-flow-carrier",
+    "name": "Prevaylos Carrier",
+    "slug": "prevaylos-carrier",
     "version": "1.0.0",
     "sdkVersion": "55.0.0",
     "orientation": "portrait",
@@ -14,7 +14,7 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.haulify.carrier",
+      "bundleIdentifier": "com.prevaylos.carrier",
       "infoPlist": {
         "NSCameraUsageDescription": "Used to photograph vehicles at pickup and delivery",
         "NSPhotoLibraryUsageDescription": "Used to upload vehicle photos and documents",
@@ -28,7 +28,7 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#1a1f2e"
       },
-      "package": "com.haulify.carrier",
+      "package": "com.prevaylos.carrier",
       "permissions": [
         "CAMERA",
         "READ_EXTERNAL_STORAGE",
