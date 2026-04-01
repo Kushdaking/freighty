@@ -7,7 +7,7 @@ export default function OnboardingWelcome() {
     <View style={styles.container}>
       <View style={styles.top}>
         <Text style={styles.logo}>🚛</Text>
-        <Text style={styles.title}>Freight Flow</Text>
+        <Text style={styles.title}>PREVAYL</Text>
         <Text style={styles.subtitle}>Carrier Portal</Text>
       </View>
 

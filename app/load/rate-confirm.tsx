@@ -248,7 +248,7 @@ export default function RateConfirmScreen() {
       {/* Terms reminder */}
       <View style={styles.termsBox}>
         <Text style={styles.termsText}>
-          By accepting, you agree to transport all listed vehicles in accordance with Freight Flow's carrier agreement. Rate is final — no adjustments after acceptance.
+          By accepting, you agree to transport all listed vehicles in accordance with Prevayl's carrier agreement. Rate is final — no adjustments after acceptance.
         </Text>
       </View>
 
