@@ -223,6 +223,15 @@ function HistoryCard({ load }: { load: Shipment }) {
           <Text style={styles.price}>${parseFloat(String(load.total_price)).toLocaleString()}</Text>
         ) : null}
       </View>
+
+      {load.status === 'delivered' && (
+        <TouchableOpacity
+          style={styles.claimBtn}
+          onPress={() => router.push({ pathname: '/claims/file', params: { shipmentId: load.id } })}
+        >
+          <Text style={styles.claimBtnText}>🛡️ File Damage Claim</Text>
+        </TouchableOpacity>
+      )}
     </TouchableOpacity>
   );
 }
@@ -303,6 +312,8 @@ const styles = StyleSheet.create({
   cardFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 8, borderTopWidth: 1, borderTopColor: colors.border },
   footerDate: { fontSize: 11, color: colors.textDim },
   price: { fontSize: 14, fontWeight: '800', color: colors.success },
+  claimBtn: { marginTop: 8, borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 8, alignItems: 'center' },
+  claimBtnText: { color: '#ef4444', fontSize: 13, fontWeight: '600' },
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 80 },
   emptyIcon: { fontSize: 48, marginBottom: 12 },
   emptyText: { fontSize: 16, fontWeight: '700', color: colors.text },

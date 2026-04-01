@@ -181,6 +181,27 @@ function AvailableCard({
   const pricePerMile = load.total_price && load.distance_miles
     ? (load.total_price / load.distance_miles).toFixed(2)
     : null;
+  const [marketRate, setMarketRate] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (load.origin_state && load.destination_state) {
+      fetch('https://app.prevaylos.com/api/pricing/suggest', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          origin_state: load.origin_state,
+          destination_state: load.destination_state,
+          vehicle_count: vehicleCount || 1,
+          distance_miles: load.distance_miles || 500,
+          transport_type: load.transport_type || 'open',
+          is_expedited: load.is_expedited || false,
+          is_cross_border: load.is_cross_border || false,
+        }),
+      }).then(r => r.json()).then(d => {
+        if (d.suggested_price) setMarketRate(d.suggested_price);
+      }).catch(() => {});
+    }
+  }, [load.id]);
 
   function reviewLoad() {
     router.push({ pathname: '/load/rate-confirm', params: { id: load.id } });
@@ -250,6 +271,17 @@ function AvailableCard({
             </>
           ) : (
             <Text style={styles.rateTbd}>Price TBD</Text>
+          )}
+          {marketRate && (
+            <Text style={{
+              fontSize: 11,
+              fontWeight: '600',
+              marginTop: 2,
+              color: load.total_price && load.total_price > marketRate ? '#10b981' : '#ef4444',
+            }}>
+              Market Rate: ${marketRate.toLocaleString()}
+              {load.total_price ? (load.total_price > marketRate ? ' ↑' : ' ↓') : ''}
+            </Text>
           )}
         </View>
         <TouchableOpacity style={styles.acceptBtn} onPress={reviewLoad}>

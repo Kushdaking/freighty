@@ -4,6 +4,7 @@ import {
   Alert, ActivityIndicator, ScrollView, TextInput,
 } from 'react-native';
 import Slider from '@react-native-community/slider';
+import { router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { colors } from '@/lib/colors';
 import type { CarrierUser } from '@/lib/types';
@@ -104,6 +105,32 @@ export default function ProfileScreen() {
         </View>
       )}
 
+      {/* Reputation Score */}
+      {(carrier as any)?.reputation_score !== undefined && (carrier as any)?.reputation_score !== null && (
+        <View style={styles.reputationCard}>
+          <Text style={styles.reputationTitle}>Your Rating</Text>
+          <View style={styles.reputationMain}>
+            <Text style={styles.reputationScore}>
+              {(carrier as any).reputation_score >= 70 ? '⭐' : '🔴'} {(carrier as any).reputation_score}/100
+            </Text>
+          </View>
+          <View style={styles.reputationBreakdown}>
+            {[
+              { label: 'On-Time', value: `${Math.round(((carrier as any).on_time_rate || 0) * 100)}%` },
+              { label: 'Damage-Free', value: `${Math.round((1 - Math.min((carrier as any).damage_rate || 0, 1)) * 100)}%` },
+              { label: 'Exception-Free', value: `${Math.round((1 - Math.min((carrier as any).exception_rate || 0, 1)) * 100)}%` },
+              { label: 'Response', value: (carrier as any).avg_response_time_hours ? `${(carrier as any).avg_response_time_hours.toFixed(1)}h avg` : 'N/A' },
+            ].map(item => (
+              <View key={item.label} style={styles.repItem}>
+                <Text style={styles.repLabel}>{item.label}</Text>
+                <Text style={styles.repValue}>{item.value}</Text>
+              </View>
+            ))}
+          </View>
+          <Text style={styles.repLoads}>Based on {(carrier as any).total_completed_loads || 0} completed loads</Text>
+        </View>
+      )}
+
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Company</Text>
         <InfoRow label="Company" value={carrier?.company_name} />
@@ -197,6 +224,15 @@ export default function ProfileScreen() {
         </TouchableOpacity>
       </View>
 
+      {/* Quick Links */}
+      <TouchableOpacity style={styles.capacityBtn} onPress={() => router.push('/capacity/post')}>
+        <Text style={styles.capacityBtnText}>🚛 Post My Capacity</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity style={styles.claimsBtn} onPress={() => router.push('/claims/file')}>
+        <Text style={styles.claimsBtnText}>🛡️ My Damage Claims</Text>
+      </TouchableOpacity>
+
       <TouchableOpacity style={styles.signOutBtn} onPress={handleSignOut}>
         <Text style={styles.signOutText}>Sign Out</Text>
       </TouchableOpacity>
@@ -274,6 +310,23 @@ const styles = StyleSheet.create({
   },
   saveBtnDisabled: { opacity: 0.6 },
   saveBtnText: { color: colors.white, fontWeight: '700', fontSize: 15 },
+  capacityBtn: {
+    width: '100%',
+    backgroundColor: colors.primary,
+    borderRadius: 10,
+    padding: 14,
+    alignItems: 'center',
+  },
+  capacityBtnText: { color: '#2E4057', fontWeight: '800', fontSize: 15 },
+  claimsBtn: {
+    width: '100%',
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 10,
+    padding: 14,
+    alignItems: 'center',
+  },
+  claimsBtnText: { color: colors.text, fontWeight: '600', fontSize: 14 },
   signOutBtn: {
     width: '100%',
     borderWidth: 1,
@@ -284,4 +337,21 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   signOutText: { color: colors.danger, fontWeight: '700', fontSize: 15 },
+  reputationCard: {
+    backgroundColor: colors.bgCard,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    width: '100%',
+  },
+  reputationTitle: { color: colors.textMuted, fontSize: 12, fontWeight: '600', marginBottom: 8 },
+  reputationMain: { alignItems: 'center', marginBottom: 12 },
+  reputationScore: { fontSize: 28, fontWeight: '800', color: colors.primary },
+  reputationBreakdown: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
+  repItem: { alignItems: 'center', flex: 1 },
+  repLabel: { fontSize: 11, color: colors.textMuted, marginBottom: 2 },
+  repValue: { fontSize: 13, fontWeight: '700', color: colors.text },
+  repLoads: { fontSize: 11, color: colors.textMuted, textAlign: 'center' },
 });
