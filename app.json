@@ -15,6 +15,7 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.prevaylos.carrier",
+        "appleTeamId": "732JYMAYFP",
       "infoPlist": {
         "NSCameraUsageDescription": "Used to photograph vehicles at pickup and delivery",
         "NSPhotoLibraryUsageDescription": "Used to upload vehicle photos and documents",
