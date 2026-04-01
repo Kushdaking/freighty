@@ -253,62 +253,71 @@ export default function MapHomeScreen() {
 
   useEffect(() => {
     let mounted = true;
+    let watchSub: Location.LocationSubscription | null = null;
 
-    (async () => {
+    const startLocation = async () => {
       try {
         const { status } = await Location.requestForegroundPermissionsAsync();
-        if (status !== 'granted') return;
-      } catch (permErr) {
-        console.warn('Location permission error:', permErr);
-        return;
-      }
+        if (!mounted || status !== 'granted') return;
 
-      // Small delay to let the permission dialog fully dismiss before starting GPS
-      await new Promise(resolve => setTimeout(resolve, 500));
-      if (!mounted) return;
+        // Wait 1s after permission granted before touching GPS
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        if (!mounted) return;
 
-      try {
-        locationSubRef.current = await Location.watchPositionAsync(
-          { accuracy: Location.Accuracy.Low, timeInterval: 10000, distanceInterval: 50 },
-          (loc) => {
-            if (!mounted) return;
-            const coords: Coords = {
-              latitude: loc.coords.latitude,
-              longitude: loc.coords.longitude,
-            };
-            setUserLocation(coords);
-
-            // Animate camera on first fix
-            if (firstFix.current) {
-              firstFix.current = false;
-              mapRef.current?.animateToRegion(
-                { ...coords, latitudeDelta: 0.15, longitudeDelta: 0.15 },
-                1200
-              );
-              // Fetch nearby POIs
-              fetchNearbyPOI(coords.latitude, coords.longitude).then(setPois);
-            }
-
-            // Supabase update every 60s
-            const now = Date.now();
-            if (carrierId && now - lastLocationUpdate.current > 60000) {
-              lastLocationUpdate.current = now;
-              supabase
-                .from('carrier_users')
-                .update({ current_lat: coords.latitude, current_lng: coords.longitude })
-                .eq('id', carrierId)
-                .then(() => {});
-            }
+        // Get one-time position first (safer than watchPosition on cold start)
+        try {
+          const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Low });
+          if (!mounted) return;
+          const coords: Coords = { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
+          setUserLocation(coords);
+          if (firstFix.current) {
+            firstFix.current = false;
+            setTimeout(() => {
+              if (mounted) {
+                mapRef.current?.animateToRegion({ ...coords, latitudeDelta: 0.15, longitudeDelta: 0.15 }, 1200);
+                fetchNearbyPOI(coords.latitude, coords.longitude).then(pois => { if (mounted) setPois(pois); });
+              }
+            }, 500);
           }
-        );
-      } catch (locErr) {
-        console.warn('Location watch failed:', locErr);
+        } catch (e) {
+          console.warn('getCurrentPosition failed:', e);
+        }
+
+        // Then start watching (with another delay)
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        if (!mounted) return;
+
+        try {
+          watchSub = await Location.watchPositionAsync(
+            { accuracy: Location.Accuracy.Low, timeInterval: 15000, distanceInterval: 100 },
+            (loc) => {
+              if (!mounted) return;
+              const coords: Coords = { latitude: loc.coords.latitude, longitude: loc.coords.longitude };
+              setUserLocation(coords);
+              const now = Date.now();
+              if (carrierId && now - lastLocationUpdate.current > 60000) {
+                lastLocationUpdate.current = now;
+                supabase.from('carrier_users')
+                  .update({ current_lat: coords.latitude, current_lng: coords.longitude })
+                  .eq('id', carrierId).then(() => {});
+              }
+            }
+          );
+          locationSubRef.current = watchSub;
+        } catch (e) {
+          console.warn('watchPosition failed:', e);
+        }
+      } catch (e) {
+        console.warn('Location setup failed:', e);
       }
-    })();
+    };
+
+    startLocation();
 
     return () => {
       mounted = false;
       locationSubRef.current?.remove();
+      watchSub?.remove();
     };
   }, [carrierId]);
 
