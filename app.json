@@ -49,20 +49,20 @@
         "expo-notifications",
         {
           "icon": "./assets/icon.png",
-          "color": "#2563eb",
+          "color": "#C9A84C",
           "sounds": []
         }
       ],
       [
         "expo-camera",
         {
-          "cameraPermission": "Allow Freight Flow to access your camera to photograph vehicles."
+          "cameraPermission": "Allow Prevayl to access your camera to photograph vehicles."
         }
       ],
       [
         "expo-image-picker",
         {
-          "photosPermission": "Allow Freight Flow to access your photos for vehicle documentation."
+          "photosPermission": "Allow Prevayl to access your photos for vehicle documentation."
         }
       ],
       [
@@ -78,7 +78,7 @@
         }
       ]
     ],
-    "scheme": "freightflow",
+    "scheme": "prevayl",
     "web": {
       "bundler": "metro"
     },

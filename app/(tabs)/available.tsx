@@ -9,7 +9,7 @@ import { supabase } from '@/lib/supabase';
 import { colors } from '@/lib/colors';
 import type { Shipment } from '@/lib/types';
 
-const BOOKMARKS_KEY = 'ff_bookmarked_loads';
+const BOOKMARKS_KEY = 'prevayl_bookmarked_loads';
 
 const ORIGIN_STATES = ['All', 'CA', 'TX', 'FL', 'NY', 'IL', 'PA', 'OH', 'GA', 'NC', 'MI', 'AZ', 'WA', 'CO', 'OR'];
 const DEST_STATES = ['All', 'CA', 'TX', 'FL', 'NY', 'IL', 'PA', 'OH', 'GA', 'NC', 'MI', 'AZ', 'WA', 'CO', 'OR'];

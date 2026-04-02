@@ -185,7 +185,7 @@ export default function HomeScreen() {
             <Text style={styles.statLabel}>EARNED</Text>
           </View>
           <View style={styles.statCard}>
-            <Text style={[styles.statValue, { color: '#60a5fa' }]}>{stats.total}</Text>
+            <Text style={[styles.statValue, { color: '#C9A84C' }]}>{stats.total}</Text>
             <Text style={styles.statLabel}>TOTAL LOADS</Text>
           </View>
         </View>
@@ -220,7 +220,7 @@ const styles = StyleSheet.create({
   sectionTitle: { fontSize: 13, color: GOLD, letterSpacing: 2, fontWeight: '700', marginBottom: 10, textTransform: 'uppercase' },
   loadCard: { backgroundColor: CARD, borderWidth: 1, borderColor: BORDER, borderRadius: 14, padding: 16 },
   loadCardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 },
-  trackingNum: { fontSize: 16, color: '#60a5fa', fontFamily: BEBAS, letterSpacing: 1, fontWeight: '700' },
+  trackingNum: { fontSize: 16, color: '#C9A84C', fontFamily: BEBAS, letterSpacing: 1, fontWeight: '700' },
   statusBadge: { borderWidth: 1, borderRadius: 20, paddingHorizontal: 10, paddingVertical: 3 },
   statusText: { fontSize: 12, fontWeight: '700', letterSpacing: 0.5 },
   routeRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 },
