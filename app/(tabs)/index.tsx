@@ -156,7 +156,7 @@ export default function HomeScreen() {
               <Text style={styles.rate}>${activeLoad.carrier_rate.toLocaleString()}</Text>
             )}
 
-            <TouchableOpacity style={styles.mapButton} onPress={() => router.push('/(tabs)/routes')}>
+            <TouchableOpacity style={styles.mapButton} onPress={() => router.push('/(tabs)/map')}>
               <Text style={styles.mapButtonText}>📍 VIEW ROUTE DETAILS</Text>
             </TouchableOpacity>
           </View>
@@ -197,6 +197,7 @@ export default function HomeScreen() {
         <View style={styles.actionsGrid}>
           {[
             { icon: '📦', label: 'MY LOADS', route: '/(tabs)/routes' },
+            { icon: '🗺', label: 'MAP', route: '/(tabs)/map' },
             { icon: '🔍', label: 'LOAD BOARD', route: '/(tabs)/available' },
             { icon: '💰', label: 'EARNINGS', route: '/(tabs)/earnings' },
             { icon: '🚗', label: 'MY FLEET', route: '/(tabs)/fleet' },
