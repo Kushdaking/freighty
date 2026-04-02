@@ -1,323 +1,217 @@
 import React, { useState, useEffect } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  Modal, TextInput, Alert, ActivityIndicator, RefreshControl,
+  View, Text, StyleSheet, TouchableOpacity, ScrollView,
+  Modal, TextInput, Alert, ActivityIndicator, RefreshControl
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '@/lib/supabase';
-import { colors } from '@/lib/colors';
 
-const BASE_URL = 'https://app.prevaylos.com';
+const GOLD = '#C9A84C';
+const BG = '#0a0f1a';
+const CARD = '#111827';
+const BORDER = '#1e2d40';
+const TEXT = '#f0f4f8';
+const DIM = '#a8c4d8';
+const GREEN = '#34d399';
+const AMBER = '#f59e0b';
+const RED = '#ef4444';
 
-function getDaysUntilExpiry(dateStr: string): number {
-  if (!dateStr) return 9999;
-  const now = new Date();
-  const expiry = new Date(dateStr);
-  return Math.floor((expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+const VEHICLE_TYPES = ['Car', 'SUV', 'Truck', 'Van', 'Motorcycle', 'Boat', 'RV', 'Other'];
+const STATUS_OPTIONS = ['Active', 'Maintenance', 'Inactive'];
+
+interface Vehicle {
+  id: string;
+  vin: string;
+  year: string;
+  make: string;
+  model: string;
+  color: string;
+  license_plate: string;
+  plate_state: string;
+  vehicle_type: string;
+  status: string;
+  last_inspection?: string;
 }
 
 export default function FleetScreen() {
-  const [trucks, setTrucks] = useState<any[]>([]);
-  const [drivers, setDrivers] = useState<any[]>([]);
+  const insets = useSafeAreaInsets();
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [activeTab, setActiveTab] = useState<'trucks' | 'drivers'>('trucks');
-  const [carrierId, setCarrierId] = useState<string | null>(null);
+  const [showModal, setShowModal] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState({
+    vin: '', year: '', make: '', model: '', color: '',
+    license_plate: '', plate_state: '', vehicle_type: 'Car', status: 'Active'
+  });
 
-  // Add truck
-  const [showAddTruck, setShowAddTruck] = useState(false);
-  const [truckForm, setTruckForm] = useState({ unit_number: '', make: '', model: '', year: '', license_plate: '', state: '', transport_type: 'open' });
-
-  // Select truck modal
-  const [showSelectTruck, setShowSelectTruck] = useState(false);
-  const [selectedLoadId, setSelectedLoadId] = useState<string | null>(null);
-
-  useEffect(() => {
-    loadCarrierId();
-  }, []);
-
-  async function loadCarrierId() {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      setCarrierId(user.id);
-      loadFleet(user.id);
-    }
-  }
-
-  async function loadFleet(cid?: string) {
-    const id = cid || carrierId;
-    if (!id) return;
-    setLoading(true);
+  const loadVehicles = async () => {
     try {
-      const [trucksRes, driversRes] = await Promise.all([
-        fetch(`${BASE_URL}/api/fleet/trucks?carrier_user_id=${id}`),
-        fetch(`${BASE_URL}/api/fleet/drivers?carrier_user_id=${id}`),
-      ]);
-      if (trucksRes.ok) setTrucks(await trucksRes.json());
-      if (driversRes.ok) setDrivers(await driversRes.json());
-    } catch (err) {
-      console.error('Fleet load error:', err);
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      // Try carrier_vehicles table, fallback to empty
+      const { data, error } = await supabase
+        .from('carrier_vehicles')
+        .select('*')
+        .eq('carrier_user_id', session.user.id)
+        .order('created_at', { ascending: false });
+      if (!error) setVehicles(data || []);
+    } catch (e) {
+      // Table may not exist yet
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
-  }
+  };
 
-  async function onRefresh() {
-    setRefreshing(true);
-    await loadFleet();
-    setRefreshing(false);
-  }
+  useEffect(() => { loadVehicles(); }, []);
 
-  async function addTruck() {
-    if (!truckForm.make || !truckForm.model) {
-      Alert.alert('Required', 'Please enter make and model');
+  const saveVehicle = async () => {
+    if (!form.vin || !form.year || !form.make || !form.model) {
+      Alert.alert('Missing Info', 'VIN, Year, Make and Model are required');
       return;
     }
+    setSaving(true);
     try {
-      const res = await fetch(`${BASE_URL}/api/fleet/trucks`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...truckForm, carrier_user_id: carrierId, year: truckForm.year ? parseInt(truckForm.year) : null }),
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      const { error } = await supabase.from('carrier_vehicles').insert({
+        ...form, carrier_user_id: session.user.id
       });
-      if (res.ok) {
-        setShowAddTruck(false);
-        setTruckForm({ unit_number: '', make: '', model: '', year: '', license_plate: '', state: '', transport_type: 'open' });
-        await loadFleet();
-        Alert.alert('✅ Truck added!');
-      } else {
-        const err = await res.json();
-        Alert.alert('Error', err.error || 'Failed to add truck');
-      }
-    } catch (err: any) {
-      Alert.alert('Error', err.message);
+      if (error) throw error;
+      setShowModal(false);
+      setForm({ vin: '', year: '', make: '', model: '', color: '', license_plate: '', plate_state: '', vehicle_type: 'Car', status: 'Active' });
+      loadVehicles();
+    } catch (e: any) {
+      Alert.alert('Error', e.message || 'Could not save vehicle');
+    } finally {
+      setSaving(false);
     }
-  }
+  };
 
-  async function selectTruckForLoad(truckId: string) {
-    if (!selectedLoadId) return;
-    try {
-      const res = await fetch(`${BASE_URL}/api/fleet/assign`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ truck_id: truckId, shipment_id: selectedLoadId, driver_id: drivers.find((d: any) => d.current_truck_id === truckId)?.id }),
-      });
-      if (res.ok) {
-        setShowSelectTruck(false);
-        setSelectedLoadId(null);
-        Alert.alert('✅ Truck assigned to load!');
-      }
-    } catch (err: any) {
-      Alert.alert('Error', err.message);
-    }
-  }
+  const statusColor = (s: string) => s === 'Active' ? GREEN : s === 'Maintenance' ? AMBER : RED;
 
-  function getTruckStatusColor(truck: any): string {
-    if (truck.current_shipment_id) return colors.primary;
-    if (!truck.is_active) return colors.textDim;
-    return colors.success;
-  }
-
-  function getTruckStatusLabel(truck: any): string {
-    if (truck.current_shipment_id) return 'On Load';
-    if (!truck.is_active) return 'Inactive';
-    return 'Available';
-  }
-
-  if (loading && trucks.length === 0) {
+  if (loading) {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={styles.loadingText}>Loading fleet...</Text>
+      <View style={[styles.container, { alignItems: 'center', justifyContent: 'center' }]}>
+        <ActivityIndicator color={GOLD} size="large" />
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.title}>🚛 My Fleet</Text>
-        <TouchableOpacity style={styles.addBtn} onPress={() => setShowAddTruck(true)}>
-          <Text style={styles.addBtnText}>+ Truck</Text>
+        <Text style={styles.title}>MY FLEET</Text>
+        <TouchableOpacity style={styles.addBtn} onPress={() => setShowModal(true)}>
+          <Text style={styles.addBtnText}>+ ADD VEHICLE</Text>
         </TouchableOpacity>
       </View>
 
-      {/* Stats */}
-      <View style={styles.statsRow}>
-        <View style={styles.statCard}>
-          <Text style={styles.statNum}>{trucks.length}</Text>
-          <Text style={styles.statLabel}>Trucks</Text>
-        </View>
-        <View style={styles.statCard}>
-          <Text style={[styles.statNum, { color: colors.success }]}>
-            {trucks.filter(t => !t.current_shipment_id && t.is_active).length}
-          </Text>
-          <Text style={styles.statLabel}>Available</Text>
-        </View>
-        <View style={styles.statCard}>
-          <Text style={[styles.statNum, { color: colors.primary }]}>
-            {trucks.filter(t => t.current_shipment_id).length}
-          </Text>
-          <Text style={styles.statLabel}>On Load</Text>
-        </View>
-        <View style={styles.statCard}>
-          <Text style={styles.statNum}>{drivers.length}</Text>
-          <Text style={styles.statLabel}>Drivers</Text>
-        </View>
-      </View>
-
-      {/* Tabs */}
-      <View style={styles.tabRow}>
-        {(['trucks', 'drivers'] as const).map(tab => (
-          <TouchableOpacity
-            key={tab}
-            style={[styles.tab, activeTab === tab && styles.tabActive]}
-            onPress={() => setActiveTab(tab)}
-          >
-            <Text style={[styles.tabText, activeTab === tab && styles.tabTextActive]}>
-              {tab === 'trucks' ? `Trucks (${trucks.length})` : `Drivers (${drivers.length})`}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
       <ScrollView
-        style={styles.list}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
+        contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); loadVehicles(); }} tintColor={GOLD} />}
       >
-        {activeTab === 'trucks' ? (
-          trucks.length === 0 ? (
-            <Text style={styles.empty}>No trucks. Add one to get started.</Text>
-          ) : (
-            trucks.map(truck => {
-              const statusColor = getTruckStatusColor(truck);
-              const statusLabel = getTruckStatusLabel(truck);
-              const assignedDriver = drivers.find(d => d.current_truck_id === truck.id);
-              return (
-                <View key={truck.id} style={styles.card}>
-                  <View style={styles.cardHeader}>
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.cardTitle}>
-                        #{truck.unit_number || 'N/A'} — {truck.year} {truck.make} {truck.model}
-                      </Text>
-                      <View style={styles.badgeRow}>
-                        <View style={[styles.badge, { borderColor: statusColor + '40' }]}>
-                          <Text style={[styles.badgeText, { color: statusColor }]}>{statusLabel}</Text>
-                        </View>
-                        <View style={styles.badge}>
-                          <Text style={styles.badgeText}>{truck.transport_type?.toUpperCase()}</Text>
-                        </View>
-                        <Text style={styles.cardSub}>{truck.capacity_vehicles || 8} vehicles</Text>
-                      </View>
-                    </View>
-                  </View>
-                  {truck.license_plate && (
-                    <Text style={styles.cardSub}>Plate: {truck.license_plate} ({truck.state})</Text>
-                  )}
-                  {assignedDriver && (
-                    <Text style={styles.cardSub}>Driver: {assignedDriver.name}</Text>
-                  )}
-                  {!truck.current_shipment_id && truck.is_active && (
-                    <TouchableOpacity
-                      style={styles.selectBtn}
-                      onPress={() => {
-                        Alert.alert('Use This Truck', `Set truck #${truck.unit_number} as active for your next load?`, [
-                          { text: 'Cancel', style: 'cancel' },
-                          { text: 'Use This Truck', onPress: () => Alert.alert('✅ Truck selected for next assignment') },
-                        ]);
-                      }}
-                    >
-                      <Text style={styles.selectBtnText}>Use This Truck</Text>
-                    </TouchableOpacity>
-                  )}
-                </View>
-              );
-            })
-          )
+        {vehicles.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Text style={{ fontSize: 40, marginBottom: 12 }}>🚗</Text>
+            <Text style={styles.emptyTitle}>NO VEHICLES YET</Text>
+            <Text style={styles.emptySubtitle}>Add your first vehicle to track your fleet</Text>
+            <TouchableOpacity style={[styles.addBtn, { marginTop: 16 }]} onPress={() => setShowModal(true)}>
+              <Text style={styles.addBtnText}>+ ADD VEHICLE</Text>
+            </TouchableOpacity>
+          </View>
         ) : (
-          drivers.length === 0 ? (
-            <Text style={styles.empty}>No drivers registered.</Text>
-          ) : (
-            drivers.map(driver => {
-              const days = getDaysUntilExpiry(driver.license_expiry);
-              const expiryColor = days <= 30 ? colors.danger : days <= 90 ? colors.warning : colors.success;
-              const assignedTruck = trucks.find(t => t.id === driver.current_truck_id);
-              return (
-                <View key={driver.id} style={styles.card}>
-                  <Text style={styles.cardTitle}>{driver.name}</Text>
-                  <View style={styles.badgeRow}>
-                    <View style={styles.badge}>
-                      <Text style={styles.badgeText}>CDL-{driver.cdl_class}</Text>
-                    </View>
-                    {driver.license_expiry && (
-                      <View style={[styles.badge, { borderColor: expiryColor + '40' }]}>
-                        <Text style={[styles.badgeText, { color: expiryColor }]}>
-                          {days <= 0 ? 'EXPIRED' : `${days}d`}
-                        </Text>
-                      </View>
-                    )}
-                  </View>
-                  {driver.phone && <Text style={styles.cardSub}>📞 {driver.phone}</Text>}
-                  {assignedTruck && (
-                    <Text style={styles.cardSub}>
-                      Truck: #{assignedTruck.unit_number} {assignedTruck.make} {assignedTruck.model}
-                    </Text>
-                  )}
-                  {days <= 90 && days > 0 && (
-                    <View style={[styles.alert, { borderColor: expiryColor + '30' }]}>
-                      <Text style={[styles.alertText, { color: expiryColor }]}>
-                        ⚠️ License expires in {days} days ({driver.license_expiry})
-                      </Text>
-                    </View>
-                  )}
-                  {days <= 0 && (
-                    <View style={[styles.alert, { borderColor: colors.danger + '30' }]}>
-                      <Text style={[styles.alertText, { color: colors.danger }]}>
-                        🔴 License EXPIRED — driver cannot legally operate
-                      </Text>
-                    </View>
-                  )}
+          vehicles.map(v => (
+            <View key={v.id} style={styles.vehicleCard}>
+              <View style={styles.vehicleHeader}>
+                <Text style={styles.vehicleName}>{v.year} {v.make} {v.model}</Text>
+                <View style={[styles.statusBadge, { borderColor: statusColor(v.status) + '60', backgroundColor: statusColor(v.status) + '20' }]}>
+                  <Text style={[styles.statusText, { color: statusColor(v.status) }]}>{v.status.toUpperCase()}</Text>
                 </View>
-              );
-            })
-          )
+              </View>
+              <View style={styles.vehicleDetails}>
+                <Text style={styles.detailLabel}>VIN</Text>
+                <Text style={styles.detailValue}>{v.vin}</Text>
+              </View>
+              {v.license_plate && (
+                <View style={styles.vehicleDetails}>
+                  <Text style={styles.detailLabel}>PLATE</Text>
+                  <Text style={styles.detailValue}>{v.license_plate} {v.plate_state}</Text>
+                </View>
+              )}
+              <View style={styles.vehicleDetails}>
+                <Text style={styles.detailLabel}>TYPE</Text>
+                <Text style={styles.detailValue}>{v.vehicle_type}</Text>
+              </View>
+            </View>
+          ))
         )}
-        <View style={{ height: 32 }} />
       </ScrollView>
 
-      {/* Add Truck Modal */}
-      <Modal visible={showAddTruck} transparent animationType="slide">
-        <View style={styles.modalOverlay}>
-          <View style={styles.modal}>
-            <Text style={styles.modalTitle}>🚛 Add Truck</Text>
+      {/* Add Vehicle Modal */}
+      <Modal visible={showModal} animationType="slide" presentationStyle="pageSheet">
+        <View style={styles.modal}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>ADD VEHICLE</Text>
+            <TouchableOpacity onPress={() => setShowModal(false)}>
+              <Text style={{ color: DIM, fontSize: 24 }}>×</Text>
+            </TouchableOpacity>
+          </View>
+          <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20 }}>
             {[
-              { key: 'unit_number', label: 'Unit Number', placeholder: 'T-001' },
-              { key: 'make', label: 'Make *', placeholder: 'Peterbilt' },
-              { key: 'model', label: 'Model *', placeholder: '389' },
-              { key: 'year', label: 'Year', placeholder: '2022' },
-              { key: 'license_plate', label: 'License Plate', placeholder: 'ABC1234' },
-              { key: 'state', label: 'State', placeholder: 'MI' },
-            ].map(f => (
-              <View key={f.key} style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>{f.label}</Text>
+              { label: 'VIN *', key: 'vin', placeholder: '17-character VIN' },
+              { label: 'YEAR *', key: 'year', placeholder: '2020', keyboardType: 'numeric' },
+              { label: 'MAKE *', key: 'make', placeholder: 'Toyota' },
+              { label: 'MODEL *', key: 'model', placeholder: 'Camry' },
+              { label: 'COLOR', key: 'color', placeholder: 'White' },
+              { label: 'LICENSE PLATE', key: 'license_plate', placeholder: 'ABC-1234' },
+              { label: 'PLATE STATE', key: 'plate_state', placeholder: 'MI' },
+            ].map(field => (
+              <View key={field.key} style={styles.formField}>
+                <Text style={styles.fieldLabel}>{field.label}</Text>
                 <TextInput
                   style={styles.input}
-                  placeholder={f.placeholder}
-                  placeholderTextColor={colors.textDim}
-                  value={(truckForm as any)[f.key]}
-                  onChangeText={v => setTruckForm(prev => ({ ...prev, [f.key]: v }))}
-                  keyboardType={f.key === 'year' ? 'numeric' : 'default'}
+                  value={(form as any)[field.key]}
+                  onChangeText={v => setForm(f => ({ ...f, [field.key]: v }))}
+                  placeholder={field.placeholder}
+                  placeholderTextColor="#4a6580"
+                  autoCapitalize={field.key === 'vin' ? 'characters' : 'words'}
                 />
               </View>
             ))}
-            <View style={styles.modalBtns}>
-              <TouchableOpacity style={styles.cancelBtn} onPress={() => setShowAddTruck(false)}>
-                <Text style={styles.cancelText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.saveBtn} onPress={addTruck}>
-                <Text style={styles.saveBtnText}>Add Truck</Text>
-              </TouchableOpacity>
+
+            <Text style={styles.fieldLabel}>VEHICLE TYPE</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 16 }}>
+              {VEHICLE_TYPES.map(t => (
+                <TouchableOpacity
+                  key={t}
+                  onPress={() => setForm(f => ({ ...f, vehicle_type: t }))}
+                  style={[styles.chip, form.vehicle_type === t && styles.chipActive]}
+                >
+                  <Text style={[styles.chipText, form.vehicle_type === t && styles.chipTextActive]}>{t}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+
+            <Text style={styles.fieldLabel}>STATUS</Text>
+            <View style={{ flexDirection: 'row', gap: 10, marginBottom: 24 }}>
+              {STATUS_OPTIONS.map(s => (
+                <TouchableOpacity
+                  key={s}
+                  onPress={() => setForm(f => ({ ...f, status: s }))}
+                  style={[styles.chip, form.status === s && styles.chipActive]}
+                >
+                  <Text style={[styles.chipText, form.status === s && styles.chipTextActive]}>{s}</Text>
+                </TouchableOpacity>
+              ))}
             </View>
-          </View>
+
+            <TouchableOpacity style={styles.saveBtn} onPress={saveVehicle} disabled={saving}>
+              {saving ? <ActivityIndicator color="#0a0f1a" /> : <Text style={styles.saveBtnText}>SAVE VEHICLE</Text>}
+            </TouchableOpacity>
+          </ScrollView>
         </View>
       </Modal>
     </View>
@@ -325,44 +219,32 @@ export default function FleetScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.bg },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg },
-  loadingText: { color: colors.textMuted, marginTop: 12, fontSize: 14 },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 20, paddingBottom: 8 },
-  title: { fontSize: 22, fontWeight: '800', color: colors.text },
-  addBtn: { backgroundColor: colors.primary, borderRadius: 8, paddingHorizontal: 14, paddingVertical: 7 },
-  addBtnText: { color: '#fff', fontSize: 13, fontWeight: '700' },
-  statsRow: { flexDirection: 'row', paddingHorizontal: 16, gap: 8, marginBottom: 12 },
-  statCard: { flex: 1, backgroundColor: colors.bgCard, borderRadius: 10, padding: 12, alignItems: 'center' },
-  statNum: { fontSize: 22, fontWeight: '800', color: colors.text },
-  statLabel: { fontSize: 10, color: colors.textDim, marginTop: 2 },
-  tabRow: { flexDirection: 'row', marginHorizontal: 16, backgroundColor: colors.bgCard, borderRadius: 10, padding: 4, marginBottom: 12 },
-  tab: { flex: 1, paddingVertical: 7, alignItems: 'center', borderRadius: 8 },
-  tabActive: { backgroundColor: colors.bgCardAlt },
-  tabText: { fontSize: 13, color: colors.textDim, fontWeight: '600' },
-  tabTextActive: { color: colors.text },
-  list: { flex: 1, paddingHorizontal: 16 },
-  empty: { color: colors.textDim, fontSize: 14, textAlign: 'center', marginTop: 40 },
-  card: { backgroundColor: colors.bgCard, borderRadius: 12, padding: 16, marginBottom: 10, borderWidth: 1, borderColor: colors.border },
-  cardHeader: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 6 },
-  cardTitle: { fontSize: 15, fontWeight: '700', color: colors.text, marginBottom: 4 },
-  cardSub: { fontSize: 12, color: colors.textDim, marginTop: 2 },
-  badgeRow: { flexDirection: 'row', gap: 6, flexWrap: 'wrap', alignItems: 'center', marginTop: 2 },
-  badge: { borderWidth: 1, borderColor: colors.border, borderRadius: 20, paddingHorizontal: 8, paddingVertical: 2 },
-  badgeText: { fontSize: 11, color: colors.textMuted, fontWeight: '600' },
-  alert: { marginTop: 8, borderWidth: 1, borderRadius: 8, padding: 8 },
-  alertText: { fontSize: 12, fontWeight: '600' },
-  selectBtn: { marginTop: 10, backgroundColor: colors.primary + '20', borderRadius: 8, padding: 8, alignItems: 'center', borderWidth: 1, borderColor: colors.primary + '40' },
-  selectBtnText: { color: colors.primary, fontSize: 12, fontWeight: '700' },
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-end' },
-  modal: { backgroundColor: colors.bgCard, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 24 },
-  modalTitle: { fontSize: 18, fontWeight: '800', color: colors.text, marginBottom: 20 },
-  inputGroup: { marginBottom: 12 },
-  inputLabel: { fontSize: 11, color: colors.textMuted, marginBottom: 4 },
-  input: { backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.border, borderRadius: 8, padding: 10, color: colors.text, fontSize: 14 },
-  modalBtns: { flexDirection: 'row', gap: 10, marginTop: 16 },
-  cancelBtn: { flex: 1, borderWidth: 1, borderColor: colors.border, borderRadius: 10, padding: 12, alignItems: 'center' },
-  cancelText: { color: colors.textMuted, fontSize: 14 },
-  saveBtn: { flex: 1, backgroundColor: colors.primary, borderRadius: 10, padding: 12, alignItems: 'center' },
-  saveBtnText: { color: '#fff', fontSize: 14, fontWeight: '700' },
+  container: { flex: 1, backgroundColor: BG },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, borderBottomWidth: 1, borderBottomColor: BORDER },
+  title: { fontSize: 28, color: GOLD, fontWeight: '800', letterSpacing: 2 },
+  addBtn: { backgroundColor: GOLD, borderRadius: 8, paddingHorizontal: 14, paddingVertical: 8 },
+  addBtnText: { color: '#0a0f1a', fontSize: 13, fontWeight: '800', letterSpacing: 0.5 },
+  emptyState: { alignItems: 'center', paddingVertical: 60 },
+  emptyTitle: { fontSize: 18, color: DIM, fontWeight: '700', letterSpacing: 2 },
+  emptySubtitle: { fontSize: 14, color: '#556b80', marginTop: 6 },
+  vehicleCard: { backgroundColor: CARD, borderWidth: 1, borderColor: BORDER, borderRadius: 12, padding: 16, marginBottom: 12 },
+  vehicleHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+  vehicleName: { fontSize: 16, color: TEXT, fontWeight: '700' },
+  statusBadge: { borderWidth: 1, borderRadius: 12, paddingHorizontal: 8, paddingVertical: 3 },
+  statusText: { fontSize: 11, fontWeight: '700', letterSpacing: 0.5 },
+  vehicleDetails: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 4 },
+  detailLabel: { fontSize: 11, color: DIM, letterSpacing: 1, fontWeight: '600' },
+  detailValue: { fontSize: 13, color: TEXT },
+  modal: { flex: 1, backgroundColor: BG },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, borderBottomWidth: 1, borderBottomColor: BORDER },
+  modalTitle: { fontSize: 22, color: GOLD, fontWeight: '800', letterSpacing: 2 },
+  formField: { marginBottom: 16 },
+  fieldLabel: { fontSize: 11, color: DIM, letterSpacing: 1, fontWeight: '600', marginBottom: 6, textTransform: 'uppercase' },
+  input: { backgroundColor: CARD, borderWidth: 1, borderColor: BORDER, borderRadius: 8, padding: 12, color: TEXT, fontSize: 15 },
+  chip: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20, borderWidth: 1, borderColor: BORDER, marginRight: 8 },
+  chipActive: { backgroundColor: GOLD, borderColor: GOLD },
+  chipText: { color: DIM, fontSize: 13, fontWeight: '600' },
+  chipTextActive: { color: '#0a0f1a' },
+  saveBtn: { backgroundColor: GOLD, borderRadius: 10, padding: 14, alignItems: 'center' },
+  saveBtnText: { color: '#0a0f1a', fontSize: 16, fontWeight: '800', letterSpacing: 1 },
 });
