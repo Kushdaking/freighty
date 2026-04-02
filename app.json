@@ -66,12 +66,6 @@
         }
       ],
       [
-        "react-native-maps",
-        {
-          "googleMapsApiKey": "AIzaSyA-LCcaPwCMdeTYmBmy6JdKp6byDKypHA0"
-        }
-      ],
-      [
         "expo-location",
         {
           "locationWhenInUsePermission": "Prevayl uses your location to show your position and find nearby truck stops."
