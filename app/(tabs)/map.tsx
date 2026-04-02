@@ -3,7 +3,7 @@ import {
   View, Text, StyleSheet, TouchableOpacity, ActivityIndicator,
   Platform, Dimensions, Alert,
 } from 'react-native';
-import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
+import MapView, { Marker, Polyline } from 'react-native-maps';
 import * as Location from 'expo-location';
 import { router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
@@ -65,6 +65,7 @@ export default function MapScreen() {
   const [originCoord, setOriginCoord] = useState<GeoPoint | null>(null);
   const [destCoord, setDestCoord] = useState<GeoPoint | null>(null);
   const [loading, setLoading] = useState(true);
+  const [mapReady, setMapReady] = useState(false);
   const [locationGranted, setLocationGranted] = useState(false);
   const [tracking, setTracking] = useState(false);
   const locationSub = useRef<Location.LocationSubscription | null>(null);
@@ -119,9 +120,13 @@ export default function MapScreen() {
 
   useEffect(() => {
     loadData();
-    requestLocation();
     return () => { locationSub.current?.remove(); };
   }, [loadData]);
+
+  // Only request location after map is ready to avoid grey screen crash
+  useEffect(() => {
+    if (mapReady) requestLocation();
+  }, [mapReady]);
 
   async function requestLocation() {
     const { status } = await Location.requestForegroundPermissionsAsync();
@@ -202,13 +207,13 @@ export default function MapScreen() {
       <MapView
         ref={mapRef}
         style={styles.map}
-        provider={PROVIDER_GOOGLE}
         customMapStyle={DARK_MAP_STYLE}
         initialRegion={initialRegion}
-        showsUserLocation={locationGranted}
+        showsUserLocation={mapReady && locationGranted}
         showsMyLocationButton={false}
-        showsTraffic
+        showsTraffic={mapReady}
         showsCompass={false}
+        onMapReady={() => setMapReady(true)}
       >
         {/* Origin marker */}
         {originCoord && (
